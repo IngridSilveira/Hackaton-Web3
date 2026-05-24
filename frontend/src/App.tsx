@@ -1,19 +1,23 @@
+import { Toaster } from 'react-hot-toast';
+import { RouterProvider } from 'react-router-dom';
 
-import { SignUp } from "./pages/SignUp";
 
+import { ModalConnect } from './components/modalConnect';
+import { ModalUser } from './components/modalUser';
 
-import { ModalConnectWallet } from "./components/modal";
-
+import { router } from './router';
 
 
 export default function App() {
 
-
-
     return (
         <div className="w-screen min-h-screen">
-            <ModalConnectWallet />
-            <SignUp />
+            <Toaster />
+
+            <ModalConnect />
+            <ModalUser />
+            
+            <RouterProvider router={router} />
         </div>
     );
 } 

@@ -62,4 +62,18 @@ describe('Tests of SignUp contract', async () => {
         await expect(tx).to.be.revertedWith('Usuario ja registrado no sistema.');
     });
 
+
+    it('Test function to get user data', async () => {
+        const [user] = await ethers.getSigners();
+
+        /**
+         * Testando se os dados do usuário "Alan Turing" são retornados corretamente.
+         * Isso é feito chamando a função getUser do contrato SignUp, passando o 
+         * endereço do usuário.
+         */
+        const userData = await signUpContract.getUser(user.address);
+
+        expect(userData.username).to.equal('Alan Turing');
+        expect(userData.userType).to.equal(ProfileType.DONOR);
+    });
 });

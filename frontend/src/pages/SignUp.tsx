@@ -1,17 +1,35 @@
-import type { SubmitEventHandler } from "react";
+import toast from 'react-hot-toast';
+import { useState, type SubmitEventHandler } from "react";
+
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
+import { SignUpContract } from "@/contracts/SignUp";
+
+import { useWalletStore } from "../stores/useWalletStore";
 
 
 export function SignUp() {
+    const [username, setUsername] = useState("");
+    const [userType, setUserType] = useState(0);
+
+    const signer = useWalletStore((state) => state.signer);
+    const signUpContract = new SignUpContract(signer);
 
 
-    const submitForm: SubmitEventHandler<HTMLFormElement> = (event) => {
+    const submitForm: SubmitEventHandler<HTMLFormElement> = async (event) => {
         event.preventDefault();
+        const [tx, err] = await signUpContract.signUp(username, Number(userType));
+
+        if (err) {
+            toast.error(err.reason);
+            return;
+        }
+
+        toast.success('Registro na blockchain foi feito com sucesso!');
     }
 
 
@@ -30,9 +48,11 @@ export function SignUp() {
                     <Input 
                         type="text" 
                         className="w-full h-12 bg-[#F2F4F7] rounded-[10px] px-2 focus-visible:ring-[#53B1FD]" 
-                        placeholder="Nome de usuario" />
+                        placeholder="Nome de usuario"
+                        value={username}
+                        onChange={(e: any) => setUsername(e.target.value)} />
 
-                    <RadioGroup defaultValue={0} className="mt-5">
+                    <RadioGroup defaultValue={0} className="mt-5" onValueChange={setUserType}>
                         <div className="flex gap-1 items-center">
                             <RadioGroupItem value={0} id="id-ong" /> 
                             <Label htmlFor="id-ong">Cadastrar como ONG</Label>
@@ -43,7 +63,7 @@ export function SignUp() {
                         </div>
                     </RadioGroup>
 
-                    <Button className="mt-10 w-full">
+                    <Button className="mt-10 w-full" type="submit">
                         Cadastra-se
                     </Button>
                 </form>

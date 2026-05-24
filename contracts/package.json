@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "hardhat test",
-    "serve": "hardhat node --network localhost"
+    "serve": "hardhat node"
   },
   "keywords": [],
   "author": "",

@@ -56,4 +56,16 @@ contract SignUp {
         
         emit UserRegistered(msg.sender, _username, _userType);
     }
+
+
+    /**
+     * @dev Função para obter as informações de um usuário registrado.
+     * 
+     * @param _userAddress O endereço do usuário.
+     * @return User A estrutura contendo as informações do usuário.
+     */
+    function getUser(address _userAddress) public view returns (User memory) {
+        require(bytes(users[_userAddress].username).length > 0, "Usuario nao encontrado.");
+        return users[_userAddress];
+    }
 }
