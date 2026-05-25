@@ -13,4 +13,3 @@ export const useUserStore = create<UserStore>((set) => ({
     userType: 0,
 
     setUser: (user: UserType) => set({ username: user.username, userType: user.userType }),
-}));
