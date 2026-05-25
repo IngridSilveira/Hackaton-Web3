@@ -1,34 +1,49 @@
-import { useCallback } from "react";
+import type { ethers } from "ethers";
+import { useState } from "react";
+
+import { SignUpContract } from "../contracts/SignUp";
+import type { UserType } from "../types/user";
 
 
-import { SignUpContract } from "@/contracts/SignUp";
-import { useWalletStore } from "../stores/useWalletStore";
 
-import { UserNotConnectedException } from "../exceptions/UserException";
+export const State = {
+    LOADDING: 0,
+    SUCESS: 1,
+    ERROR: 2,
+} as const;
 
+type StateType = (typeof State)[keyof typeof State]
 
 
 export function useUser() {
-
-    const walletStore = useWalletStore();
-    const signUpContract = new SignUpContract(walletStore.signer);
-
-
-    const handlerGetUser = useCallback(async () => {
-        if (!walletStore.connected)
-            throw new UserNotConnectedException('Carteira do usuário não esta conectada.');
+    const [state, setState] = useState<StateType>(State.LOADDING);
+    const [error, setError] = useState<string>('');
 
 
-        const [tx, err] = await signUpContract.getUser(walletStore.address);
+    const getUserData = async (signer: ethers.Signer): Promise<UserType | null> => {
+        setState(State.LOADDING);
 
-        if (err) 
-            throw err;
+        const signUpContract = new SignUpContract(signer);
+        const address = await signer.getAddress();
 
-        console.log(tx);
-        return tx;
-    }, []);
+        const [user, err] = await signUpContract.getUser(address);
+
+        if (err) {
+            setError(err.reason);
+            setState(State.ERROR);
+
+            return null;
+        }
+        
+        setState(State.SUCESS);
+        return user;
+    }
+
 
     return {
-        handlerGetUser,
+        state,
+        error,
+        getUserData,
     }
+
 }

@@ -3,9 +3,9 @@ import { RouterProvider } from 'react-router-dom';
 
 
 import { ModalConnect } from './components/modalConnect';
-import { ModalUser } from './components/modalUser';
 
-import { router } from './router';
+import { routes } from './routes';
+
 
 
 export default function App() {
@@ -13,11 +13,9 @@ export default function App() {
     return (
         <div className="w-screen min-h-screen">
             <Toaster />
-
             <ModalConnect />
-            <ModalUser />
-            
-            <RouterProvider router={router} />
+
+            <RouterProvider router={routes} />
         </div>
     );
 } 

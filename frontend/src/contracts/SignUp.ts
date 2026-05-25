@@ -41,8 +41,6 @@ export class SignUpContract {
     public async getUser(_userAddress: string) {
         try {
             const tx = await this.instance.getUser(_userAddress);
-            await tx.wait();
-
             return [tx, null];
         }
         catch (err) {

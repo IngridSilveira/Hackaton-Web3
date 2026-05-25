@@ -1,4 +1,4 @@
 import { CustomException } from "./CustomException";
 
 
-export class UserNotConnectedException extends CustomException {}
+export class UserException extends CustomException {}

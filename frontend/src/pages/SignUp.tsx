@@ -1,4 +1,5 @@
 import toast from 'react-hot-toast';
+import { useNavigate } from 'react-router-dom';
 import { useState, type SubmitEventHandler } from "react";
 
 
@@ -13,6 +14,8 @@ import { useWalletStore } from "../stores/useWalletStore";
 
 
 export function SignUp() {
+    const navigate = useNavigate();
+
     const [username, setUsername] = useState("");
     const [userType, setUserType] = useState(0);
 
@@ -22,6 +25,7 @@ export function SignUp() {
 
     const submitForm: SubmitEventHandler<HTMLFormElement> = async (event) => {
         event.preventDefault();
+        
         const [tx, err] = await signUpContract.signUp(username, Number(userType));
 
         if (err) {
@@ -30,6 +34,7 @@ export function SignUp() {
         }
 
         toast.success('Registro na blockchain foi feito com sucesso!');
+        navigate('/');
     }
 
 

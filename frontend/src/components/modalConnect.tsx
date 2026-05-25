@@ -1,14 +1,12 @@
-import { AlertCircle } from "lucide-react"
-import { useCallback, useEffect, type FC } from "react";
+import { AlertCircle } from 'lucide-react'
+import { useCallback, useEffect, type FC } from 'react';
 
-import { useWallet, StateConnection } from "../hooks/useWallet";
-import { WalletException } from "../exceptions/WalletException";
 
-import { useWalletStore } from "../stores/useWalletStore";
-import { useUserStore } from "../stores/useUserStore";
+import { useWallet, StateConnection } from '../hooks/useWallet';
+import { WalletException } from '../exceptions/WalletException';
 
-import { Button } from "@/components/ui/button";
-import { useUser } from "../hooks/useUser";
+import { useWalletStore } from '../stores/useWalletStore';
+import { Button } from '@/components/ui/button';
 
 
 
@@ -72,9 +70,9 @@ const ModalNotConnected: FC<ModalNotConnectedProps> = (props: ModalNotConnectedP
 }
 
 export const ModalConnect = () => {
-    const walletStore = useWalletStore();
+    const setSigner = useWalletStore(state => state.setSigner);
     const { connection, error, handlerConnectionWallet } = useWallet();
-    
+
 
     const connnectWallet = useCallback(async () => {
         const { signer }  = await handlerConnectionWallet();
@@ -82,7 +80,7 @@ export const ModalConnect = () => {
         if (!signer)
             return;
 
-        walletStore.setSigner(signer);
+        setSigner(signer);
     }, []);
 
 
