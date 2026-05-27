@@ -48,9 +48,9 @@ export class SignUpContract {
             return [tx, null];
         }
         catch (err) {
-            let message = err instanceof Error ? err.message : 'Um erro desconhecido aconteceu';
+            let message = 'Um erro desconhecido aconteceu';
 
-            if (typeof err === "object" && err && "reason" in err)
+            if (typeof err === "object" && err && "reason" in err && err.reason != null)
                 message = err.reason as string;
 
             return [null, new ErrorGetUser(message)];

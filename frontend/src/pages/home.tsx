@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
 import type { UserType } from "../types/user";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 
 import { SignUpContract } from "../contracts/signUp";
 import { RequestState, useRequest } from "../hooks/useRequest";
+import { ModalCreateCampaign } from "../components/modalCreateCampaign";
 
 
 function LoaddingUserInformation() {
@@ -58,18 +59,24 @@ function LoaddingUserInformation() {
 
 export function Home() {
     const userType = useUserStore(state => state.userType);
+    const [isVisibleModal, setVisibleModal] = useState<boolean>(false);
+
+    const handleCloseModal = useCallback((state: boolean) => {
+        setVisibleModal(state);
+    }, []);
 
     return (
         <div className="p-5">
 
             <LoaddingUserInformation />
+            { isVisibleModal ? <ModalCreateCampaign onClose={() => handleCloseModal(false)} /> : null }
             
             <div className="mt-10 flex items-center justify-between">
                 <h1 className="text-2xl font-black">
                     Lista de Campanhas:
                 </h1>
 
-                { userType == 0 ? <Button>Cadastrar Campanha</Button> : null }
+                { userType == 0 ? <Button onClick={() => handleCloseModal(true)}>Cadastrar Campanha</Button> : null }
             </div>
 
 

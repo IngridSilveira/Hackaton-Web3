@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 
 import CampaignABI from './artifacts/Campaign.sol/Campaign.json';
 import type { CampaignType } from '../types/campaing';
+import { GetCampaignsException } from '../exceptions/CampaignException';
 
 
 
@@ -28,13 +29,19 @@ export class CampaignContract {
     }
 
 
-    public async createCampaign(title: string, goalAmount: BigInt) {
+    public async createCampaign(title: string, goalAmount: BigInt): Promise<[void | null, Error | null]> {
+
         try {
             const tx = await this.instance.createCampaign(title, goalAmount);
             return [tx, null];
         }
         catch (err) {
-            return [null, err];
+            let message = 'Um erro desconhecido aconteceu';
+
+            if (typeof err === "object" && err && "reason" in err && err.reason != null)
+                message = err.reason as string;
+
+            return [null, new GetCampaignsException(message)];
         }
     }
 
@@ -44,7 +51,12 @@ export class CampaignContract {
             const tx = await this.instance.getAllCampaigns();
             return [tx, null];
         } catch (err) {
-            return [null, err as Error];
+            let message = 'Um erro desconhecido aconteceu';
+
+            if (typeof err === "object" && err && "reason" in err && err.reason != null)
+                message = err.reason as string;
+
+            return [null, new GetCampaignsException(message)];
         }
     }
 }
