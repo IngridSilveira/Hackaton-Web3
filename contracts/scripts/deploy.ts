@@ -17,15 +17,34 @@ async function deploySignUp() {
 }
 
 
+async function deployCampaign(signUpAddress: string) {
+    const Campaign = await ethers.getContractFactory('Campaign');
+    const campaign = await Campaign.deploy();
+    await campaign.waitForDeployment();
+
+    const campaignAddress = await campaign.getAddress();
+
+    /**
+     * Definindo o contrato de SignUp no contrato de Campaign
+     */
+    await campaign.setSignUpContract(signUpAddress);
+
+    return { campaign, campaignAddress };
+}
+
+
+
 async function main() {
     const [deployer] = await ethers.getSigners();
 
     console.log('Deploying contracts with the account: ', deployer.address);
 
     const { signUp, signUpAddress } = await deploySignUp();
+    const { campaign, campaignAddress } = await deployCampaign(signUpAddress);
 
 
     console.log('SignUp deployed to: ', signUpAddress);
+    console.log('Campaign deployed to: ', campaignAddress);
 }
 
 main()

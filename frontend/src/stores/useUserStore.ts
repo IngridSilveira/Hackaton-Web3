@@ -10,7 +10,7 @@ interface UserStore extends UserType {
 
 export const useUserStore = create<UserStore>((set) => ({
     username: '',
-    userType: 0,
+    userType: -1,
 
     setUser: (user: UserType) => set({ username: user.username, userType: user.userType })
 }));

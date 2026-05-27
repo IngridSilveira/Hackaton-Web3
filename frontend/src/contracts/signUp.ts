@@ -1,6 +1,9 @@
 import { ethers } from 'ethers';
 
 
+import type { UserType } from '../types/user';
+import { ErrorGetUser } from '../exceptions/UserException';
+
 import SignUpABI from './artifacts/SignUp.sol/SignUp.json';
 
 
@@ -22,6 +25,7 @@ export class SignUpContract {
             SignUpABI.abi,
             signer
         );
+
     }
 
 
@@ -38,13 +42,18 @@ export class SignUpContract {
     }
 
 
-    public async getUser(_userAddress: string) {
+    public async getUser(_userAddress: string): Promise<[UserType | null, Error | null]> {
         try {
             const tx = await this.instance.getUser(_userAddress);
             return [tx, null];
         }
         catch (err) {
-            return [null, err];
+            let message = err instanceof Error ? err.message : 'Um erro desconhecido aconteceu';
+
+            if (typeof err === "object" && err && "reason" in err)
+                message = err.reason as string;
+
+            return [null, new ErrorGetUser(message)];
         }
     }
 }

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
-import { SignUpContract } from "@/contracts/SignUp";
+import { SignUpContract } from "@/contracts/signUp";
 
 import { useWalletStore } from "../stores/useWalletStore";
 

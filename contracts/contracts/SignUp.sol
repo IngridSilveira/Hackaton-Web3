@@ -2,6 +2,22 @@
 pragma solidity ^0.8.0;
 
 
+interface ISignUp {
+    enum UserType {
+        ONG,
+        DONOR
+    }
+
+    struct User {
+        string username;
+        UserType userType;
+    }
+
+    function getUser(address _userAddress) external view returns (User memory);
+    function isONG(address _userAddress) external view returns (bool);
+}
+
+
 /**
  * @title SignUp
  *
@@ -67,5 +83,17 @@ contract SignUp {
     function getUser(address _userAddress) public view returns (User memory) {
         require(bytes(users[_userAddress].username).length > 0, "Usuario nao encontrado.");
         return users[_userAddress];
+    }
+
+    /*
+     * @dev Função para verificar se um usuário é uma ONG. Essa função
+     * é útil para validar as permissões de criação de campanhas e doações.
+     *
+     * @param _userAddress O endereço do usuário a ser verificado.
+     * @return bool Retorna true se o usuário for uma ONG, caso contrário, false.
+     */
+    function isONG(address _userAddress) public view returns (bool) {
+        require(bytes(users[_userAddress].username).length > 0, "Usuario nao encontrado.");
+        return users[_userAddress].userType == UserType.ONG;
     }
 }
