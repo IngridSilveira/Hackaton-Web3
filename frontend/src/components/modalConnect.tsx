@@ -7,6 +7,7 @@ import { WalletException } from '../exceptions/WalletException';
 
 import { useWalletStore } from '../stores/useWalletStore';
 import { Button } from '@/components/ui/button';
+import { CircleLoadding } from './circleLoadding';
 
 
 
@@ -19,12 +20,7 @@ const ModalConnecting: FC<ModalConnectingProps> = (props: ModalConnectingProps) 
 
     return (
         <div className="fixed w-full h-full bg-white flex items-center justify-center flex-col gap-4 z-10">
-            <div className="w-10 h-10 rounded-full border-5 border-t-primary animate-spin">
-            </div>
-
-            <p className="font-normal">
-                { description }
-            </p>
+            <CircleLoadding description={description} />
         </div>
     );
 }

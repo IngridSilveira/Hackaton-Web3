@@ -76,4 +76,17 @@ describe('Tests of SignUp contract', async () => {
         expect(userData.username).to.equal('Alan Turing');
         expect(userData.userType).to.equal(ProfileType.DONOR);
     });
+
+    it('Test function to check if user is ONG', async () => {
+        const [user] = await ethers.getSigners();
+
+        /**
+         * Testando se o usuário "Alan Turing" é verificado corretamente como uma ONG.
+         * Isso é feito chamando a função isONG do contrato SignUp, passando o 
+         * endereço do usuário.
+         */
+        const isONG = await signUpContract.isONG(user.address);
+
+        expect(isONG).to.equal(false);
+    });
 });
