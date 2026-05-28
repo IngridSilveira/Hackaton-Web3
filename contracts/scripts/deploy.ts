@@ -17,7 +17,16 @@ async function deploySignUp() {
 }
 
 
-async function deployCampaign(signUpAddress: string) {
+async function deployDonate() {
+    const Donate = await ethers.getContractFactory('Donate');
+    const donate = await Donate.deploy();
+    await donate.waitForDeployment();
+    
+    const donateAddress = await donate.getAddress();
+    return { donate, donateAddress };
+}
+
+async function deployCampaign(signUpAddress: string, donateAddress: string) {
     const Campaign = await ethers.getContractFactory('Campaign');
     const campaign = await Campaign.deploy();
     await campaign.waitForDeployment();
@@ -28,6 +37,7 @@ async function deployCampaign(signUpAddress: string) {
      * Definindo o contrato de SignUp no contrato de Campaign
      */
     await campaign.setSignUpContract(signUpAddress);
+    await campaign.setDonateContract(donateAddress);
 
     return { campaign, campaignAddress };
 }
@@ -40,10 +50,12 @@ async function main() {
     console.log('Deploying contracts with the account: ', deployer.address);
 
     const { signUp, signUpAddress } = await deploySignUp();
-    const { campaign, campaignAddress } = await deployCampaign(signUpAddress);
+    const { donate, donateAddress } = await deployDonate();
+    const { campaign, campaignAddress } = await deployCampaign(signUpAddress, donateAddress);
 
 
     console.log('SignUp deployed to: ', signUpAddress);
+    console.log('Donate deployed to: ', donateAddress);
     console.log('Campaign deployed to: ', campaignAddress);
 }
 
