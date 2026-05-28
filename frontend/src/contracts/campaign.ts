@@ -53,6 +53,8 @@ export class CampaignContract {
         } catch (err) {
             let message = 'Um erro desconhecido aconteceu';
 
+            console.log(err)
+
             if (typeof err === "object" && err && "reason" in err && err.reason != null)
                 message = err.reason as string;
 
