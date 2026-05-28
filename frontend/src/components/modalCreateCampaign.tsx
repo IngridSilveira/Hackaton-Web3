@@ -36,7 +36,7 @@ export function ModalCreateCampaign({ onClose }: ModalCreateCampaignProps) {
 
 
     return (
-        <div className="fixed bg-black/20 top-0 bottom-0 left-0 right-0 flex items-center justify-center">
+        <div className="fixed bg-black/20 top-0 bottom-0 left-0 right-0 flex items-center justify-center p-4">
             <div className="w-full max-w-150 bg-white p-5 rounded-2xl">
                 <div className="w-full flex justify-between items-center">
                     <h1 className="font-bold text-xl">

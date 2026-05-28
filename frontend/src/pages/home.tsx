@@ -1,3 +1,4 @@
+import { Plus } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 
@@ -56,6 +57,23 @@ function LoaddingUserInformation() {
     );
 }
 
+interface ButtonCreateCampaignProps {
+    type: number;
+    onClick: Function;
+}
+
+function ButtonCreateCampaign({ type, onClick }: ButtonCreateCampaignProps) {
+
+    if (type != 0)
+        return null;
+
+    return (
+        <Button onClick={onClick}>
+            <Plus />
+            <span className="hidden md:block">Cadastrar Campanha</span>
+        </Button> 
+    );
+}
 
 export function Home() {
     const userType = useUserStore(state => state.userType);
@@ -72,11 +90,11 @@ export function Home() {
             { isVisibleModal ? <ModalCreateCampaign onClose={() => handleCloseModal(false)} /> : null }
             
             <div className="mt-10 flex items-center justify-between">
-                <h1 className="text-2xl font-black">
+                <h1 className="text-xl font-black">
                     Lista de Campanhas:
                 </h1>
 
-                { userType == 0 ? <Button onClick={() => handleCloseModal(true)}>Cadastrar Campanha</Button> : null }
+                <ButtonCreateCampaign type={userType} onClick={() => handleCloseModal(true)} />
             </div>
 
 
