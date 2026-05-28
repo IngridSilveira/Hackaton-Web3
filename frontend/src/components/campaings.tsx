@@ -14,6 +14,7 @@ import { ErrorBox } from "./errorBox";
 
 
 import { Button } from "./ui/button";
+import { useNavigate } from "react-router-dom";
 
 function EmptyCampaigns() {
     return (
@@ -44,6 +45,8 @@ interface CardCampaignProps {
     creator: string;
     createdAt: number;
     deadline: number;
+
+    onViewCampaing: () => void;
 }
 
 function CardCampaign(props: CardCampaignProps) {
@@ -52,22 +55,29 @@ function CardCampaign(props: CardCampaignProps) {
         currentAmount,
         goalAmount,
         createdAt,
-        deadline
+        deadline,
+        onViewCampaing,
     } = props;
 
-    const ptCreated = new Date(ethers.toNumber(createdAt) * 1000).toLocaleDateString('pt-BR', { dateStyle: 'short' })
+    const ptCreated = new Date(ethers.toNumber(createdAt) * 1000).toLocaleDateString('pt-BR', { dateStyle: 'short' });
+    const isActivity = Date.now() < ethers.toNumber(deadline) * 1000;
+
 
     return (
         <div className="w-full p-4 shadow-md rounded-xl">
             <h2 className="font-bold">{ title }</h2>
             <p className="text-base">Criada em { ptCreated }</p>
 
+            <p className={`text-xs mt-5 py-1 px-2 font-semibold rounded w-min text-nowrap ${ isActivity ? 'bg-green-300' : 'bg-red-300'}`}>
+                { isActivity ? 'Recebendo doações' : 'Prazo de doação finalizado' }
+            </p>
+
             <div className="w-full border-t border-gray-200 mt-8 flex items-center justify-between pt-4">
                 <p className="my-2 text-right">
                     {currentAmount.toString()}/{goalAmount.toString()} ETH
                 </p>
 
-                <Button>
+                <Button onClick={onViewCampaing}>
                     <ExternalLink />
                     <p>Visualizar</p>
                 </Button>
@@ -80,6 +90,7 @@ function CardCampaign(props: CardCampaignProps) {
 
 export function Campaings() {
     const signer = useWalletStore(state => state.signer);
+    const navigate = useNavigate();
 
     /**
      * Como o RouterProvider é renderizado depois da
@@ -96,6 +107,16 @@ export function Campaings() {
 
         fetchData();
     }, [signer]);
+
+    const viewCampaingWithId = (id: number) => {
+        const searchParam = new URLSearchParams();
+        searchParam.set('id', String(id));
+
+        navigate({
+            pathname: '/campanha',
+            search: searchParam.toString()
+        });
+    }
 
     /**
      * Assim que tivermos a conexão com a carteira podemos 
@@ -137,7 +158,8 @@ export function Campaings() {
                         currentAmount={campaign.currentAmount}
                         creator={campaign.creator}
                         deadline={campaign.deadline}
-                        createdAt={campaign.createdAt} />
+                        createdAt={campaign.createdAt}
+                        onViewCampaing={() => viewCampaingWithId(0)} />
                 )) 
             }
         </div>
