@@ -5,6 +5,11 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import { ISignUp } from "./SignUp.sol";
 
 
+interface ICampaign {
+    function campaignIsAcceptingDonations(uint256 _id) external view returns (bool);
+    function updateCurrentAmount(uint256 _id, uint256 _amount) external;
+}
+
 
 /**
  * @title Campaign
@@ -16,13 +21,6 @@ import { ISignUp } from "./SignUp.sol";
  * fornecidas sejam válidas.
  */
 contract Campaign is Ownable {
-
-    enum CampaignStatus {
-        ACTIVE,
-        SUCCESSFUL,
-        CLAIMED,
-        CANCELED
-    }
 
     /**
      * @dev Estrutura para representar uma campanha no sistema. 
@@ -48,6 +46,14 @@ contract Campaign is Ownable {
      */
     ISignUp private signUpContract;
 
+
+    /**
+     * @dev O contrato de Donate é private porque ele só é utilizado
+     * internamente para atualizar o valor arrecadado nas campanhas 
+     * quando uma doação é feita e verificar estado da campanha 
+     * antes de aceitar uma doação.
+     */
+    address private donateContract;
 
 
     /**
@@ -89,6 +95,22 @@ contract Campaign is Ownable {
     }
 
 
+    modifier onlyDonateContract() {
+        require(msg.sender == donateContract, "Apenas o contrato de Donate pode chamar essa funcao.");
+        _;
+    }
+
+    /**
+     * @dev Função para setar o endereço do contrato de Donate.
+     * Essa função só pode ser chamada pelo owner do contrato.
+     *
+     * @param _donateContract O endereço do contrato de Donate.
+     */
+    function setDonateContract(address _donateContract) public onlyOwner {
+        donateContract = _donateContract;
+    }
+
+
     /**
      * @dev Função para criar uma nova campanha. Essa função verifica se o usuário
      * é uma ONG cadastrada e se as informações fornecidas são válidas antes de criar a campanha.
@@ -108,7 +130,7 @@ contract Campaign is Ownable {
             currentAmount: 0,
             creator: msg.sender,
             createdAt: block.timestamp,
-            deadline: block.timestamp + 7 days
+            deadline: block.timestamp + 3 days
         });
 
         userCampaigns[msg.sender].push(campaignCounter);
@@ -133,5 +155,38 @@ contract Campaign is Ownable {
         }
 
         return allCampaigns;
+    }
+
+
+    /**
+     * @dev Função para verificar se uma campanha está aceitando doações.
+     * Isso sera utilizado no contrato de Donate para verificar se a campanha 
+     * para a qual a doação está sendo feita está aceitando doações. A verifiação 
+     * é feita verificando se o prazo da campanha ainda não expirou e se o valor
+     * arrecadado ainda não atingiu o valor objetivo.
+     *
+     * @param _id O ID da campanha a ser verificada.
+     * @return true se a campanha estiver aceitando doações, false caso contrário.
+     */
+    function campaignIsAcceptingDonations(uint256 _id) public onlyDonateContract view returns (bool) {
+        CampaignStruct memory campaign = campaigns[_id];
+        require(campaign.id == _id, "Campanha nao encontrada.");
+
+        return campaign.deadline > block.timestamp && campaign.currentAmount < campaign.goalAmount;
+    }
+
+
+    /**
+     * @dev Função para atualizar o valor arrecadado em uma campanha. Apenas 
+     * o contrato de Donate pode chamar essa função.
+     *
+     * @param _id O ID da campanha a ser atualizada.
+     * @param _amount O valor a ser adicionado ao total arrecadado.
+     */
+    function updateCurrentAmount(uint256 _id, uint256 _amount) public onlyDonateContract {
+        CampaignStruct storage campaign = campaigns[_id];
+        require(campaign.id == _id, "Campanha nao encontrada.");
+
+        campaign.currentAmount += _amount;
     }
 }
