@@ -1,7 +1,9 @@
-import { useCallback, useEffect } from "react";
-import { BrushCleaning } from "lucide-react";
-
 import type { CampaignType } from "../types/campaing";
+
+import { ethers } from "ethers";
+import { useCallback, useEffect } from "react";
+import { BrushCleaning, ExternalLink } from "lucide-react";
+
 
 import { useWalletStore } from "../stores/useWalletStore";
 
@@ -11,6 +13,7 @@ import { CircleLoadding } from "./circleLoadding";
 import { ErrorBox } from "./errorBox";
 
 
+import { Button } from "./ui/button";
 
 function EmptyCampaigns() {
     return (
@@ -29,6 +32,47 @@ function LoaddingCampaign() {
     return (
         <div className="w-full py-10 flex justify-center">
             <CircleLoadding description="Carregando campanhas..." />
+        </div>
+    );
+}
+
+interface CardCampaignProps {
+    id: BigInt;
+    title: string;
+    goalAmount: BigInt;
+    currentAmount: BigInt;
+    creator: string;
+    createdAt: number;
+    deadline: number;
+}
+
+function CardCampaign(props: CardCampaignProps) {
+    const {
+        title,
+        currentAmount,
+        goalAmount,
+        createdAt,
+        deadline
+    } = props;
+
+    const ptCreated = new Date(ethers.toNumber(createdAt) * 1000).toLocaleDateString('pt-BR', { dateStyle: 'short' })
+
+    return (
+        <div className="w-full p-4 shadow-md rounded-xl">
+            <h2 className="font-bold">{ title }</h2>
+            <p className="text-base">Criada em { ptCreated }</p>
+
+            <div className="w-full border-t border-gray-200 mt-8 flex items-center justify-between pt-4">
+                <p className="my-2 text-right">
+                    {currentAmount.toString()}/{goalAmount.toString()} ETH
+                </p>
+
+                <Button>
+                    <ExternalLink />
+                    <p>Visualizar</p>
+                </Button>
+            </div>
+
         </div>
     );
 }
@@ -82,8 +126,20 @@ export function Campaings() {
         return <EmptyCampaigns />
 
     return (
-        <div className="w-full">
-            { state }
+        <div className="w-full mt-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            { 
+                data?.map((campaign, index) => (
+                    <CardCampaign 
+                        key={index}
+                        id={campaign.id}
+                        title={campaign.title}
+                        goalAmount={campaign.goalAmount}
+                        currentAmount={campaign.currentAmount}
+                        creator={campaign.creator}
+                        deadline={campaign.deadline}
+                        createdAt={campaign.createdAt} />
+                )) 
+            }
         </div>
     );
 }
