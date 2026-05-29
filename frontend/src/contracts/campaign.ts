@@ -45,6 +45,20 @@ export class CampaignContract {
         }
     }
 
+    public async getCampaign(id: number): Promise<[CampaignType | null, Error | null]> {
+        try {
+            const tx = await this.instance.getCampaign(id);
+            return [tx, null];
+        }
+        catch (err) {
+            let message = 'Um erro desconhecido aconteceu';
+
+            if (typeof err === "object" && err && "reason" in err && err.reason != null)
+                message = err.reason as string;
+
+            return [null, new GetCampaignsException(message)];
+        }
+    }
 
     public async getAllCampaigns(): Promise<[CampaignType[] | null, Error | null]> {
         try {
@@ -52,8 +66,6 @@ export class CampaignContract {
             return [tx, null];
         } catch (err) {
             let message = 'Um erro desconhecido aconteceu';
-
-            console.log(err)
 
             if (typeof err === "object" && err && "reason" in err && err.reason != null)
                 message = err.reason as string;
