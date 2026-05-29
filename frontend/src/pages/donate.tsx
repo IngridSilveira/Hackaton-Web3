@@ -58,6 +58,9 @@ function UserInformation({ creator }: UserInformationProps) {
     if (state == RequestState.LOADDING)
         return <div className="skeleton w-10 h-4"></div>;
 
+    if (state == RequestState.ERROR)
+        return <p className="text-xs">Erro ao buscar usuario!</p>
+
     return (
         <p className="text-xs">
             Criado por: <span className="font-bold">{ data?.username }</span>
