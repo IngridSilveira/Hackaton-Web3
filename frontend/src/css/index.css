@@ -136,3 +136,20 @@
 .position-stick {
   position: sticky;
 }
+
+.skeleton {
+  background: linear-gradient(90deg,rgb(224, 224, 224), rgb(245, 245, 245) 50%, rgb(224, 224, 224) 70%);
+  background-size: 200% 100%;
+  animation: sketon-animation 2s linear infinite;
+}
+
+
+@keyframes sketon-animation {
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
+}

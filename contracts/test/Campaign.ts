@@ -135,4 +135,9 @@ describe('Tests of Campaign contract', async () => {
         const campaigns = await campaignContract.getAllCampaigns();
         expect(campaigns.length).to.gte(1);
     });
+
+    it('Try get campaign with inexistent id', async () => {
+        const tx = campaignContract.getCampaign(999);
+        expect(tx).to.be.revertedWith('Campanha nao encontrada.');
+    });
 });

@@ -157,6 +157,17 @@ contract Campaign is Ownable {
         return allCampaigns;
     }
 
+    /**
+     * @dev Função para obter uma campanha específica pelo seu ID.
+     *
+     * @param _id O ID da campanha a ser obtida.
+     * @return A estrutura da campanha correspondente.
+     */
+    function getCampaign(uint256 _id) public view returns (CampaignStruct memory) {
+        require(campaigns[_id].id == _id, "Campanha nao encontrada.");
+        return campaigns[_id];
+    }
+
 
     /**
      * @dev Função para verificar se uma campanha está aceitando doações.

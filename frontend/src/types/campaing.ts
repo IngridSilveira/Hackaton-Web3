@@ -1,11 +1,11 @@
 
 
 export interface CampaignType {
-    id: BigInt;
+    id: bigint;
     title: string;
-    goalAmount: BigInt;
-    currentAmount: BigInt;
+    goalAmount: bigint;
+    currentAmount: bigint;
     creator: string;
-    createdAt: number;
-    deadline: number;
+    createdAt: bigint;
+    deadline: bigint;
 }
