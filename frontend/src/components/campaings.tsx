@@ -38,13 +38,13 @@ function LoaddingCampaign() {
 }
 
 interface CardCampaignProps {
-    id: BigInt;
+    id: bigint;
     title: string;
-    goalAmount: BigInt;
-    currentAmount: BigInt;
+    goalAmount: bigint;
+    currentAmount: bigint;
     creator: string;
-    createdAt: number;
-    deadline: number;
+    createdAt: bigint;
+    deadline: bigint;
 
     onViewCampaing: () => void;
 }
@@ -74,7 +74,7 @@ function CardCampaign(props: CardCampaignProps) {
 
             <div className="w-full border-t border-gray-200 mt-8 flex items-center justify-between pt-4">
                 <p className="my-2 text-right">
-                    {currentAmount.toString()}/{goalAmount.toString()} ETH
+                    { ethers.formatEther(currentAmount) }/{ ethers.formatEther(goalAmount) } ETH
                 </p>
 
                 <Button onClick={onViewCampaing}>
@@ -108,7 +108,7 @@ export function Campaings() {
         fetchData();
     }, [signer]);
 
-    const viewCampaingWithId = (id: number) => {
+    const viewCampaingWithId = (id: bigint) => {
         const searchParam = new URLSearchParams();
         searchParam.set('id', String(id));
 
@@ -159,7 +159,7 @@ export function Campaings() {
                         creator={campaign.creator}
                         deadline={campaign.deadline}
                         createdAt={campaign.createdAt}
-                        onViewCampaing={() => viewCampaingWithId(0)} />
+                        onViewCampaing={() => viewCampaingWithId(campaign.id)} />
                 )) 
             }
         </div>

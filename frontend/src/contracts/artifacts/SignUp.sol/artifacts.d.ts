@@ -15,7 +15,7 @@ export interface ISignUp$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/SignUp.sol";
-  readonly buildInfoId: "solc-0_8_28-b8241f27439043366cd357c3676cd8ad59b5f1ae";
+  readonly buildInfoId: "solc-0_8_28-9bc7104cf568b0a404850b721e6e543c9eee0ffd";
 };
 
 export interface SignUp$Type {
@@ -29,7 +29,7 @@ export interface SignUp$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/SignUp.sol";
-  readonly buildInfoId: "solc-0_8_28-b8241f27439043366cd357c3676cd8ad59b5f1ae";
+  readonly buildInfoId: "solc-0_8_28-9bc7104cf568b0a404850b721e6e543c9eee0ffd";
 };
 
 import "hardhat/types/artifacts";

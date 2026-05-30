@@ -53,6 +53,7 @@ async function main() {
     const { donate, donateAddress } = await deployDonate();
     const { campaign, campaignAddress } = await deployCampaign(signUpAddress, donateAddress);
 
+    donate.setCampaignContract(campaignAddress);
 
     console.log('SignUp deployed to: ', signUpAddress);
     console.log('Donate deployed to: ', donateAddress);
