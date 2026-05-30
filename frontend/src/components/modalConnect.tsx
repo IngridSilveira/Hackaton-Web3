@@ -3,11 +3,11 @@ import { useCallback, useEffect, type FC } from 'react';
 
 
 import { useWallet, StateConnection } from '../hooks/useWallet';
-import { WalletException } from '../exceptions/WalletException';
 
 import { useWalletStore } from '../stores/useWalletStore';
 import { Button } from '@/components/ui/button';
 import { CircleLoadding } from './circleLoadding';
+import { ContractException } from '../exceptions/ContractException';
 
 
 
@@ -32,7 +32,7 @@ interface ModalErrorConnectProps {
 const ModalErrorConnectWallet: FC<ModalErrorConnectProps> = (props: ModalErrorConnectProps) => {
     const { error } = props;
 
-    let message = error instanceof WalletException
+    let message = error instanceof ContractException
         ? error.message
         : 'Um erro inesperado aconteceu!';
 

@@ -1,10 +1,9 @@
 import { ethers } from 'ethers';
-
-
 import type { UserType } from '../types/user';
-import { ErrorGetUser } from '../exceptions/UserException';
+
 
 import SignUpABI from './artifacts/SignUp.sol/SignUp.json';
+import { ContractException } from '../exceptions/ContractException';
 
 
 export class SignUpContract {
@@ -53,7 +52,7 @@ export class SignUpContract {
             if (typeof err === "object" && err && "reason" in err && err.reason != null)
                 message = err.reason as string;
 
-            return [null, new ErrorGetUser(message)];
+            return [null, new ContractException(message)];
         }
     }
 }

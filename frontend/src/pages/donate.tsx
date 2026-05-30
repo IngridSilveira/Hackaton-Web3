@@ -1,7 +1,7 @@
 import type { CampaignType } from "../types/campaing";
 import type { UserType } from "../types/user";
 
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState, type SubmitEventHandler } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { ArrowLeft, PiggyBank, Landmark } from "lucide-react";
 
@@ -16,6 +16,7 @@ import { RequestState, useRequest } from "../hooks/useRequest";
 import { ethers } from "ethers";
 import { ErrorBox } from "../components/errorBox";
 import { SignUpContract } from "../contracts/signUp";
+import { DonateContract } from "../contracts/donate";
 
 
 
@@ -102,11 +103,11 @@ function CampaingsInformations(props: CampaingsInformationsProps) {
             <p className="mt-5 text-2xl">{ title }</p>
             <p className="flex gap-2 items-center mt-5">
                 <PiggyBank /> 
-                Valor arrecadado: <span className="font-bold">{ currentAmount.toString() } ETH</span>
+                Valor arrecadado: <span className="font-bold">{ ethers.formatEther(currentAmount) } ETH</span>
             </p>
             <p className="flex gap-2 items-center mt-2">
                 <Landmark /> 
-                Valor desejado: <span className="font-bold">{ goalAmount.toString() } ETH</span>
+                Valor desejado: <span className="font-bold">{ ethers.formatEther(goalAmount) } ETH</span>
             </p>
 
             <div className="mt-5 flex items-center gap-2">
@@ -120,6 +121,54 @@ function CampaingsInformations(props: CampaingsInformationsProps) {
     );
 }
 
+interface MakeDonationFormProps {
+    campaignId: bigint;
+}
+
+function LoaddingFormDonation() {
+    return (
+        <div className="mt-5">
+            <div className="skeleton rounded h-6 w-18"></div>
+            <div className="skeleton rounded h-9 w-full mt-2"></div>
+            <div className="skeleton rounded h-9 w-28.5 mt-2"></div>
+        </div>
+    );
+}
+
+function MakeDonationForm({ campaignId }: MakeDonationFormProps) {
+    const signer = useWalletStore(state => state.signer);
+    const donateContract = new DonateContract(signer!);
+
+    const { state, error, data, fetchData } = useRequest((campaign: bigint, amount: bigint) => donateContract.donate(campaign, amount));
+    const [amount, setAmount] = useState('');
+
+    const handlerMakedonate: SubmitEventHandler<HTMLFormElement> = (event) => {
+        event.preventDefault();
+        fetchData(campaignId, ethers.parseEther(amount));
+    }
+
+    return (
+        <form action="#" className="mt-5" onSubmit={handlerMakedonate}>
+
+            { 
+                state == RequestState.ERROR 
+                ? <ErrorBox message={error!.message} />
+                : null
+            }
+
+            <Label htmlFor="values" className="mb-2">Valor: </Label>
+            <Input 
+                id="values" 
+                type="number" 
+                onChange={(e: any) => setAmount(e.target.value)}
+                disabled={state == RequestState.LOADDING} />
+
+            <Button className="mt-5" type="submit" disabled={state == RequestState.LOADDING}>
+                Fazer Doação
+            </Button>
+        </form>
+    );
+}
 
 export function Donate() {
     const navigate = useNavigate();
@@ -186,14 +235,11 @@ export function Donate() {
                             <h1 className="text-xl font-bold">Faça uma Doação!</h1>
                             <p className="text-base  mt-2">Aqui você pode fazer uma doação! Preencha o formulario abaixo!</p>
 
-                            <form action="#" className="mt-5">
-                                <Label htmlFor="values" className="mb-2">Valor: </Label>
-                                <Input id="values" type="number" />
-
-                                <Button className="mt-5">
-                                    Fazer Doação
-                                </Button>
-                            </form>
+                            {
+                                state == RequestState.LOADDING || !data
+                                ? <LoaddingFormDonation />
+                                : <MakeDonationForm campaignId={0n} />
+                            }
                         </div>
                     </div>
                 </div>

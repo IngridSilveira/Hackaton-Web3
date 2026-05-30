@@ -11,6 +11,7 @@ import { useWalletStore } from "../stores/useWalletStore";
 import { CampaignContract } from "../contracts/campaign";
 import { ErrorBox } from "./errorBox";
 import { SuccessBox } from "./successBox";
+import { ethers } from "ethers";
 
 
 interface ModalCreateCampaignProps {
@@ -20,7 +21,7 @@ interface ModalCreateCampaignProps {
 
 export function ModalCreateCampaign({ onClose }: ModalCreateCampaignProps) {
     const [title, setTitle] = useState('');
-    const [goalsValue, setGoalsValue] = useState(0);
+    const [goalsValue, setGoalsValue] = useState('');
 
     const signer = useWalletStore(state => state.signer);
 
@@ -31,7 +32,7 @@ export function ModalCreateCampaign({ onClose }: ModalCreateCampaignProps) {
 
     const handlerSubmitForm: SubmitEventHandler<HTMLFormElement> = (event) => {
         event.preventDefault();
-        fetchData(title, goalsValue);
+        fetchData(title, ethers.parseEther(goalsValue));
     }
 
 
@@ -68,7 +69,7 @@ export function ModalCreateCampaign({ onClose }: ModalCreateCampaignProps) {
                             id="value" 
                             type="number" 
                             value={goalsValue}
-                            onChange={(e: ChangeEvent<HTMLInputElement>) => setGoalsValue(Number(e.target.value))}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setGoalsValue(e.target.value)}
                             disabled={state == RequestState.LOADDING} />
                     </fieldset>
 

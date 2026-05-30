@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { useState, useCallback } from 'react';
 
 
-import { WalletException } from '../exceptions/WalletException';
+import { ContractException } from '../exceptions/ContractException';
 
 
 export const StateConnection = {
@@ -28,7 +28,7 @@ export function useWallet() {
         const ethereum = (window as any).ethereum;
 
         if (!ethereum)
-            throw new WalletException('MetaMask não esta instalada!');
+            throw new ContractException('MetaMask não esta instalada!');
 
         return ethereum;
     }, []);
@@ -41,7 +41,7 @@ export function useWallet() {
 
         catch (err: any) {
             if (err.code === 4001)
-                throw new WalletException('Acesso à carteira negado pelo usuário!');
+                throw new ContractException('Acesso à carteira negado pelo usuário!');
 
             throw err;
         }
