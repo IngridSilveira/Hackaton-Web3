@@ -17,6 +17,7 @@ import { ethers } from "ethers";
 import { ErrorBox } from "../components/errorBox";
 import { SignUpContract } from "../contracts/signUp";
 import { DonateContract } from "../contracts/donate";
+import { handlerBlockchainLogs } from "../utils/events";
 
 
 
@@ -123,6 +124,7 @@ function CampaingsInformations(props: CampaingsInformationsProps) {
 
 interface MakeDonationFormProps {
     campaignId: bigint;
+    onDonationReceived: () => void;
 }
 
 function LoaddingFormDonation() {
@@ -135,17 +137,44 @@ function LoaddingFormDonation() {
     );
 }
 
-function MakeDonationForm({ campaignId }: MakeDonationFormProps) {
-    const signer = useWalletStore(state => state.signer);
-    const donateContract = new DonateContract(signer!);
+function MakeDonationForm(props: MakeDonationFormProps) {
 
-    const { state, error, data, fetchData } = useRequest((campaign: bigint, amount: bigint) => donateContract.donate(campaign, amount));
+    const {
+        campaignId, 
+        onDonationReceived,
+    } = props;
+
+    const signer = useWalletStore(state => state.signer);
     const [amount, setAmount] = useState('');
+    
+    /**
+     * Contrato de donate para fazer uma doação para uma 
+     * campanha.
+     */
+    const donateContract = new DonateContract(signer!);
+    const { state, error, data, fetchData } = useRequest((campaign: bigint, amount: bigint) => donateContract.donate(campaign, amount));
+    
 
     const handlerMakedonate: SubmitEventHandler<HTMLFormElement> = (event) => {
         event.preventDefault();
         fetchData(campaignId, ethers.parseEther(amount));
     }
+
+    /**
+     * Isso será utilizado para atualizar a interface quando 
+     * receber um evento de DonetionReceived. E buscar os 
+     * dados da campanha novamente.
+     */
+    donateContract.onDonationReceived(campaignId, onDonationReceived);
+
+    /**
+     * Limpando o evento quando o componente for desmontado.
+     */
+    useEffect(() => {
+        return () => {
+            donateContract.removeDonationReceived(campaignId, onDonationReceived);
+        }
+    }, []);
 
     return (
         <form action="#" className="mt-5" onSubmit={handlerMakedonate}>
@@ -156,7 +185,12 @@ function MakeDonationForm({ campaignId }: MakeDonationFormProps) {
                 : null
             }
 
-            <Label htmlFor="values" className="mb-2">Valor: </Label>
+            <Label 
+                htmlFor="values" 
+                className="mb-2">
+                    Valor: 
+            </Label>
+
             <Input 
                 id="values" 
                 type="number" 
@@ -169,6 +203,78 @@ function MakeDonationForm({ campaignId }: MakeDonationFormProps) {
         </form>
     );
 }
+
+
+interface CampaignHistoryProps {
+    campaignId: bigint;
+}
+
+function CampaignHistory({ campaignId }: CampaignHistoryProps) {
+    const signer = useWalletStore(state => state.signer);
+
+    /**
+     * TODO: Esse componente deve mostrar o historico de 
+     * eventos da campanha. Por exemplo: Campanha Criada, 
+     * Doações, Upload de Milestones, Votações e Saques.
+     * 
+     * A abordagem inicial foi fazer consulta separadas
+     * para buscar os logs/eventos, combina-los, orderna-los
+     * e exibir. Essa abordagem funciona! Mas não é sustentavel
+     * a longo prazo. Pois para cada contrato precisa de uma consulta.
+     * Além do processo de combiner e ordenar.
+     * 
+     * Uma possivel abordagem é utilizar o provider para indexar 
+     * os eventos. Contudo, essa abordagem exige que os eventos tenham
+     * o campaignId como primeiro argumento para que a indexação
+     * funcione.
+     */
+    const campaingContract = new CampaignContract(signer!);
+    const donateContract = new DonateContract(signer!);
+
+    const { 
+        state: stateEventsCampaign, 
+        data:  eventsCampaign,
+        fetchData: fetchEventsCampaign
+    } = useRequest(() => campaingContract.getEventsCampaignCreated(campaignId));
+
+    const {} = useRequest(() => donateContract.getEventsDonateReceived(campaignId));
+
+
+
+    /**
+     * Buscandos os eventos assim que o componente é montado.
+     */
+    useEffect(() => {
+        fetchEventsCampaign();
+    }, []);
+
+    /**
+     * Isso sera executado no final do carregamento 
+     * de todos os evento para montar a timeline.
+     */
+    useEffect(() => {
+        if (stateEventsCampaign == RequestState.SUCESS) handlerBlockchainLogs(eventsCampaign!);
+    }, [stateEventsCampaign]);
+
+
+    return (
+        <div className="md:w-1/2 shadow-md rounded-xl p-4 mt-5 md:mt-0">
+            <h2 className="text-xl font-bold">
+                Historico da Campanha!
+            </h2>
+
+            <p className="text-base mt-2">
+                Aqui você pode ver quem fez doações, solicitações de saque, 
+                votações e milestones.
+            </p>
+
+            <ul className="mt-10">
+                
+            </ul>
+        </div>
+    );
+}
+
 
 export function Donate() {
     const navigate = useNavigate();
@@ -184,21 +290,23 @@ export function Donate() {
         return navigate(-1);
 
     const signer = useWalletStore(state => state.signer);
+
     const campaingContract = new CampaignContract(signer!);
+    const { state, data, error, fetchData } = useRequest<CampaignType>(() => campaingContract.getCampaign(BigInt(id)));
 
-    const { state, data, error, fetchData } = useRequest<CampaignType>(() => campaingContract.getCampaign(Number(id)));
+    const handlerFetchData = useCallback(() => fetchData(), []);
 
-
-    const handlerNavigateBack = useCallback(() => {
-        navigate(-1);
-    }, []);
+    /**
+     * Função para retornar a pagina anterior.
+     */
+    const handlerNavigateBack = useCallback(() => navigate(-1), []);
 
     /**
      * Buscando os dados assim que o component é 
      * renderizado.
      */
     useEffect(() => {
-        fetchData();
+        handlerFetchData();
     }, []);
 
     if (state == RequestState.ERROR)
@@ -238,23 +346,17 @@ export function Donate() {
                             {
                                 state == RequestState.LOADDING || !data
                                 ? <LoaddingFormDonation />
-                                : <MakeDonationForm campaignId={0n} />
+                                : <MakeDonationForm campaignId={data!.id} onDonationReceived={handlerFetchData} />
                             }
                         </div>
                     </div>
                 </div>
 
-                <div className="md:w-1/2 shadow-md rounded-xl p-4 mt-5 md:mt-0">
-                    <h2 className="text-xl font-bold">Historico da Campanha!</h2>
-                    <p className="text-base mt-2">
-                        Aqui você pode ver quem fez doações, solicitações de saque, 
-                        votações e milestones.
-                    </p>
-
-                    <ul className="mt-10">
-                        
-                    </ul>
-                </div>
+                {
+                    state == RequestState.LOADDING || !data 
+                    ? null
+                    : <CampaignHistory campaignId={data!.id} />
+                }
             </div>
         </div>
     )

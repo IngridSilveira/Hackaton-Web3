@@ -118,11 +118,30 @@ export function Campaings() {
         });
     }
 
+
+    /**
+     * Registrando a função para quando receber um evento de 
+     * campainha. Isso vai buscar as campanhas novamente.
+     */
+    campaingsContract.onCreateCampaign(getAllCampaings);
+
+    /**
+     * Esse useEffect é utilizado para limpar o listener
+     * do evento.
+     */
+    useEffect(() => {
+        return () => {
+            campaingsContract.removeCreateCampaign(getAllCampaings);
+        }
+    }, []);
+
     /**
      * Assim que tivermos a conexão com a carteira podemos 
      * buscar as campanhas.
      */
-    useEffect(() => { getAllCampaings(); }, [signer]);
+    useEffect(() => { 
+        getAllCampaings(); 
+    }, [signer]);
 
     /**
      * Se a requisição estiver em loadding, vamos mostrar um 

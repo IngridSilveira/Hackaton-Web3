@@ -4,6 +4,7 @@ import { ethers } from "ethers";
 import DonateABI from './artifacts/Donate.sol/Donate.json';
 import { ContractException } from "../exceptions/ContractException";
 
+type CallbackDonationReceived = (campaingId: bigint, donor: string, amount: bigint) => void;
 
 export class DonateContract {
     /**
@@ -41,4 +42,35 @@ export class DonateContract {
         }
 
     }
+
+
+    public async getEventsDonateReceived(campaingId: bigint) {
+        
+    }
+
+
+    /**
+     * Isso vai chamar a callback quando receber o evento de 'DonationReceived'
+     * para uma campanha especifica.
+     * 
+     * @param campaingId 
+     * @param callback 
+     */
+    public onDonationReceived(campaingId: bigint, callback: CallbackDonationReceived) {
+        const filter = this.instance.filters.DonationReceived(campaingId);
+        this.instance.on(filter, callback);
+    }
+
+    /**
+     * Removendo o listener do evento, isso deve ser usado no 
+     * unmount do component para limpar os eventos.
+     * 
+     * @param campaingId 
+     * @param callback 
+     */
+    public removeDonationReceived(campaingId: bigint, callback: CallbackDonationReceived) {
+        const filter = this.instance.filters.DonationReceived(campaingId);
+        this.instance.off(filter, callback);
+    }
+
 }
