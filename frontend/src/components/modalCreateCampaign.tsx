@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-import { useState, type ChangeEvent, type SubmitEventHandler } from "react";
+import { useEffect, useState, type ChangeEvent, type SubmitEventHandler } from "react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,14 @@ export function ModalCreateCampaign({ onClose }: ModalCreateCampaignProps) {
         event.preventDefault();
         fetchData(title, ethers.parseEther(goalsValue));
     }
+
+    useEffect(() => {
+        if (state != RequestState.SUCESS)
+            return;
+        
+        setTitle('');
+        setGoalsValue('');
+    }, [state]);
 
 
     return (
