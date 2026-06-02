@@ -17,6 +17,11 @@ export class DonateContract {
      */
     protected instance: ethers.Contract;
 
+    /**
+     * Instancia do signer, vai ser utilizado para filtrar eventos.
+     */
+    protected signer: ethers.Signer;
+
 
     constructor(signer: ethers.Signer) {
         this.instance = new ethers.Contract(
@@ -24,6 +29,8 @@ export class DonateContract {
             DonateABI.abi,
             signer
         );
+
+        this.signer = signer;
     }
 
 

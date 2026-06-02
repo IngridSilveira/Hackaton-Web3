@@ -4,25 +4,29 @@ import type { ethers } from 'ethers';
 
 interface WalletType {
     signer: null | ethers.Signer;
+    provider: null | ethers.Provider;
     address: string;
     connected: boolean;
 
-    setSigner: (signer: ethers.Signer) => void;
+    setSignerAndProvider: (signer: ethers.Signer, provider: ethers.Provider) => void;
 }
 
 
 export const useWalletStore = create<WalletType>((set) => ({
     signer: null,
+    provider: null,
     address: '',
     connected: false,
 
-    setSigner: async (signer: ethers.Signer) => {
+    setSignerAndProvider: async (signer: ethers.Signer, provider: ethers.Provider) => {
         const address = await signer.getAddress();
 
         set({ 
-            signer: signer, 
             connected: !!signer, 
+            signer, 
+            provider,
             address 
         });
     },
+
 }));

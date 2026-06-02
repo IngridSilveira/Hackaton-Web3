@@ -57,10 +57,13 @@ export function useWallet() {
             let browserProvider = new ethers.BrowserProvider(ethereum);
             let signer = await browserProvider.getSigner();
 
+
+
             setConnectionState(StateConnection.CONNECTED);
 
             return {
                 signer,
+                provider: browserProvider,
             }
         }
         catch (err) {

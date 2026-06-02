@@ -66,17 +66,17 @@ const ModalNotConnected: FC<ModalNotConnectedProps> = (props: ModalNotConnectedP
 }
 
 export const ModalConnect = () => {
-    const setSigner = useWalletStore(state => state.setSigner);
+    const setSignerAndProvider = useWalletStore(state => state.setSignerAndProvider);
     const { connection, error, handlerConnectionWallet } = useWallet();
 
 
     const connnectWallet = useCallback(async () => {
-        const { signer }  = await handlerConnectionWallet();
-        
+        const { signer, provider }  = await handlerConnectionWallet();
+
         if (!signer)
             return;
 
-        setSigner(signer);
+        setSignerAndProvider(signer, provider);
     }, []);
 
 
