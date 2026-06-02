@@ -131,11 +131,12 @@
     }
 }
 
-
-
-.position-stick {
-  position: sticky;
+@media (min-width: 1024px) {
+  .position-stick {
+    position: sticky;
+  }
 }
+
 
 .skeleton {
   background: linear-gradient(90deg,rgb(224, 224, 224), rgb(245, 245, 245) 50%, rgb(224, 224, 224) 70%);

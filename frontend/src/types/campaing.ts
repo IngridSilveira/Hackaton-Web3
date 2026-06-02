@@ -16,6 +16,11 @@ export interface CampaignType {
     deadline: bigint;
 }
 
+export interface EventType {
+    name: string;
+    args: ethers.Result;
+}
+
 
 export interface CampaignCreatedType {
     eventName: string;

@@ -1,9 +1,9 @@
-import type { CampaignType } from "../types/campaing";
+import type { CampaignType, EventType } from "../types/campaing";
 import type { UserType } from "../types/user";
 
-import { useCallback, useEffect, useState, type SubmitEventHandler } from "react";
+import { ArrowLeft, PiggyBank, Landmark, BanknoteArrowUp } from "lucide-react";
+import React, { useCallback, useEffect, useState, type SubmitEventHandler } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { ArrowLeft, PiggyBank, Landmark } from "lucide-react";
 
 
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import { ErrorBox } from "../components/errorBox";
 import { SignUpContract } from "../contracts/signUp";
 import { DonateContract } from "../contracts/donate";
 import { handlerBlockchainLogs } from "../utils/events";
+import { Events } from "../contracts/events";
+import { CircleLoadding } from "../components/circleLoadding";
 
 
 
@@ -204,57 +206,114 @@ function MakeDonationForm(props: MakeDonationFormProps) {
     );
 }
 
+interface EventItemProps {
+    event: EventType;
+}
+
+function EventItem(props: EventItemProps) {
+
+    const { event } = props;
+
+    const icons: Record<string, React.ReactNode> = {
+        'CampaignCreated': <PiggyBank />,
+        'DonationReceived': <BanknoteArrowUp />,
+    };
+
+    if (event.name == 'CampaignCreated') {
+        return (
+            <div className="flex items-center gap-3">
+                <div className="p-3 border rounded-full">
+                    { icons[event.name] }
+                </div>
+
+                <div>
+                    <p className="font-bold">
+                        Aqui Inicia a Jornada!
+                    </p>
+                    <small>
+                        Aqui a campanha <b>{ event.args.title }</b> foi criada! Com um objetivo 
+                        de arrecadar <b>{ ethers.formatEther(event.args.goalAmount) } ETH</b>
+                    </small>
+                </div>
+            </div>
+        );
+    }
+
+    if (event.name == 'DonationReceived') {
+        return (
+            <div className="flex items-center gap-3">
+                <div className="p-3 border rounded-full">
+                    { icons[event.name] }
+                </div>
+
+                <div>
+                    <p className="font-bold">
+                        Doação recebida!
+                    </p>
+                    <small>
+                        Foi feita uma doação no valor de <b>{ ethers.formatEther(event.args.amount) } ETH</b>
+                    </small>
+                </div>
+            </div>
+        );
+    }
+
+    return (null);
+}
+
+interface EventsListProps {
+    events: Array<EventType>
+}
+
+function EventsList(props: EventsListProps) {
+    const { events } = props;
+
+    return (
+        <ul>
+            { 
+                events.map((event, index) => (
+                    <li key={index} className="mt-5">
+                        <EventItem event={ event } />
+                    </li>
+                )) 
+            }
+        </ul>
+    );
+}
 
 interface CampaignHistoryProps {
     campaignId: bigint;
 }
 
 function CampaignHistory({ campaignId }: CampaignHistoryProps) {
-    const signer = useWalletStore(state => state.signer);
+    const provider = useWalletStore(state => state.provider);
+    const eventsLogs = new Events(provider!);
 
-    /**
-     * TODO: Esse componente deve mostrar o historico de 
-     * eventos da campanha. Por exemplo: Campanha Criada, 
-     * Doações, Upload de Milestones, Votações e Saques.
-     * 
-     * A abordagem inicial foi fazer consulta separadas
-     * para buscar os logs/eventos, combina-los, orderna-los
-     * e exibir. Essa abordagem funciona! Mas não é sustentavel
-     * a longo prazo. Pois para cada contrato precisa de uma consulta.
-     * Além do processo de combiner e ordenar.
-     * 
-     * Uma possivel abordagem é utilizar o provider para indexar 
-     * os eventos. Contudo, essa abordagem exige que os eventos tenham
-     * o campaignId como primeiro argumento para que a indexação
-     * funcione.
-     */
-    const campaingContract = new CampaignContract(signer!);
-    const donateContract = new DonateContract(signer!);
+    const [campaignEvents, setCampaignEvents] = useState<Array<EventType>>([]);
+    const { state, data, error, fetchData } = useRequest(() => eventsLogs.getEventsLog(campaignId));
 
-    const { 
-        state: stateEventsCampaign, 
-        data:  eventsCampaign,
-        fetchData: fetchEventsCampaign
-    } = useRequest(() => campaingContract.getEventsCampaignCreated(campaignId));
 
-    const {} = useRequest(() => donateContract.getEventsDonateReceived(campaignId));
-
+    const handlerCampaignEvents = () => {
+        const events = eventsLogs.parseLogsEvents(data!);
+        setCampaignEvents(events);
+    }
 
 
     /**
      * Buscandos os eventos assim que o componente é montado.
      */
     useEffect(() => {
-        fetchEventsCampaign();
+        fetchData();
     }, []);
 
     /**
-     * Isso sera executado no final do carregamento 
-     * de todos os evento para montar a timeline.
+     * Isso sera executado no final do carregamento dos eventos.
+     * Os eventos seram formatados e em seguida exibidos.
      */
     useEffect(() => {
-        if (stateEventsCampaign == RequestState.SUCESS) handlerBlockchainLogs(eventsCampaign!);
-    }, [stateEventsCampaign]);
+        if (state == RequestState.SUCESS && data && data.length > 0) 
+            handlerCampaignEvents();
+    }, [state]);
 
 
     return (
@@ -268,9 +327,23 @@ function CampaignHistory({ campaignId }: CampaignHistoryProps) {
                 votações e milestones.
             </p>
 
-            <ul className="mt-10">
-                
-            </ul>
+            { 
+                state == RequestState.ERROR 
+                ? <ErrorBox message={error!.message} />
+                : null
+            }
+
+            {
+                state == RequestState.LOADDING
+                ? <CircleLoadding description="Carregando histórico" />
+                : null
+            }
+
+            {
+                state == RequestState.SUCESS && data 
+                ? <EventsList events={campaignEvents} />
+                : null
+            }
         </div>
     );
 }
