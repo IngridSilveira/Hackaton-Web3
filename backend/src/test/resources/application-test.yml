@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+web3:
+  rpc-url: https://placeholder.sepolia.io
+  contract-address: "0x0000000000000000000000000000000000000000"
+
+jwt:
+  secret: "test-secret-com-pelo-menos-256-bits-para-hmac-sha-256"
+  expiration-ms: 86400000
+
+cors:
+  allowed-origins: http://localhost:5173

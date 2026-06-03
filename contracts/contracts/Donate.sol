@@ -24,6 +24,19 @@ contract Donate is Ownable, ReentrancyGuard {
 
 
     /**
+     * @dev Mapeamento que armazena o valor total das doações recebidas para cada campanha.
+     * Isso é utilizado para manter um registro do valor arrecadado para cada campanha, com
+     * isso podemos devolver o valor arrecadado para os doadores caso a campanha seja 
+     * cancelada.
+     *
+     * O mapeamento funciona da seguinte forma: o primeiro uint256 é o ID da campanha. 
+     * O ID aponta para o endereo do doador, que por sua vez aponta para o valor total das doações 
+     * feitas por aquele doador para aquela campanha.
+     */
+    mapping(uint256 => mapping(address => uint256)) private donationsByCampaign;
+
+
+    /**
      * @dev Evento emitido quando uma doação é recebida.
      *
      * @param campaignId O ID da campanha para a qual a doação foi feita.
@@ -68,7 +81,8 @@ contract Donate is Ownable, ReentrancyGuard {
         );
 
         campaignContract.updateCurrentAmount(_campaignId, msg.value);
-        
+        donationsByCampaign[_campaignId][msg.sender] += msg.value;
+
         emit DonationReceived(_campaignId, msg.sender, msg.value);
     }
 

@@ -1,0 +1,27 @@
+# Build
+target/
+*.class
+*.jar
+*.war
+
+# Credenciais e ambiente — NUNCA versionar
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Maven wrapper (se não usar)
+!.mvn/wrapper/maven-wrapper.jar
+
+# macOS
+.DS_Store

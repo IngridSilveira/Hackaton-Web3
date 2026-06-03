@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/impactledger
+    username: ${DB_USER:postgres}
+    password: ${DB_PASS:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  data:
+    jpa:
+      repositories:
+        enabled: true
+
+server:
+  port: 8080
+
+web3:
+  rpc-url: ${WEB3_RPC_URL:https://sepolia.infura.io/v3/SEU_PROJECT_ID}
+  contract-address: ${CONTRACT_ADDRESS:0x0000000000000000000000000000000000000000}
+
+jwt:
+  secret: ${JWT_SECRET:mude-este-secret-em-producao-use-256-bits-aqui}
+  expiration-ms: 86400000
+
+cors:
+  allowed-origins: ${CORS_ORIGINS:http://localhost:5173}
+
+logging:
+  level:
+    com.impactledger: DEBUG
