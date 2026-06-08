@@ -17,7 +17,6 @@ import { ethers } from "ethers";
 import { ErrorBox } from "../components/errorBox";
 import { SignUpContract } from "../contracts/signUp";
 import { DonateContract } from "../contracts/donate";
-import { handlerBlockchainLogs } from "../utils/events";
 import { Events } from "../contracts/events";
 import { CircleLoadding } from "../components/circleLoadding";
 
@@ -50,14 +49,15 @@ function UserInformation({ creator }: UserInformationProps) {
     const signer = useWalletStore(state => state.signer);
 
     const signUpContract = new SignUpContract(signer!);
-    const { state, data, error, fetchData } = useRequest<UserType>(() => signUpContract.getUser(creator));
+    const { state, data, fetchData } = useRequest<UserType>(() => signUpContract.getUser(creator));
 
     /**
      * Isso vai buscar o nome de quem criou a campanha.
      */
     useEffect(() => {
+        if (!signer) return;
         fetchData();
-    }, []);
+    }, [signer, creator]);
 
     if (state == RequestState.LOADDING)
         return <div className="skeleton w-10 h-4"></div>;
@@ -85,7 +85,6 @@ interface CampaingsInformationsProps {
 function CampaingsInformations(props: CampaingsInformationsProps) {
 
     const {
-        id,
         title,
         goalAmount,
         currentAmount,
@@ -154,7 +153,7 @@ function MakeDonationForm(props: MakeDonationFormProps) {
      * campanha.
      */
     const donateContract = new DonateContract(signer!);
-    const { state, error, data, fetchData } = useRequest((campaign: bigint, amount: bigint) => donateContract.donate(campaign, amount));
+    const { state, error, fetchData } = useRequest((campaign: bigint, amount: bigint) => donateContract.donate(campaign, amount));
     
 
     const handlerMakedonate: SubmitEventHandler<HTMLFormElement> = (event) => {
@@ -359,8 +358,17 @@ export function Donate() {
      * Se não tiver um id no query param, o usuario 
      * será redirecionado para a pagina anterior.
      */
+    const [redirected, setRedirected] = useState(false);
+
+    useEffect(() => {
+        if (!id && !redirected) {
+            setRedirected(true);
+            navigate(-1);
+        }
+    }, [id, navigate, redirected]);
+
     if (!id)
-        return navigate(-1);
+        return null;
 
     const signer = useWalletStore(state => state.signer);
 

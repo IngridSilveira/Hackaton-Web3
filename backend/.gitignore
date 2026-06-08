@@ -21,6 +21,8 @@ target/
 logs/
 
 # Maven wrapper (se não usar)
+.mvn/apache-maven-*/
+.mvn/apache-maven-*-bin.zip
 !.mvn/wrapper/maven-wrapper.jar
 
 # macOS

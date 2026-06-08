@@ -51,7 +51,7 @@ export class DonateContract {
     }
 
 
-    public async getEventsDonateReceived(campaingId: bigint) {
+    public async getEventsDonateReceived(_campaingId: bigint) {
         
     }
 

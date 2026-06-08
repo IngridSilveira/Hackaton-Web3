@@ -1,7 +1,7 @@
 import type { CampaignType } from "../types/campaing";
 
 import { ethers } from "ethers";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { BrushCleaning, ExternalLink } from "lucide-react";
 
 
@@ -92,21 +92,26 @@ export function Campaings() {
     const signer = useWalletStore(state => state.signer);
     const navigate = useNavigate();
 
-    /**
-     * Como o RouterProvider é renderizado depois da
-     * conexão com a carteira do usuário, podemos 
-     * considerar que o signer existe.
-     */
-    const campaingsContract = new CampaignContract(signer!);
-    const { state, error, data, fetchData } = useRequest<CampaignType[]>(() => campaingsContract.getAllCampaigns());
+    const campaingsContract = useMemo(() => {
+        if (!signer) return null;
+        return new CampaignContract(signer);
+    }, [signer]);
+
+    const { state, error, data, fetchData } = useRequest<CampaignType[]>(() => {
+        if (!campaingsContract) {
+            return Promise.resolve([null, new Error('Carteira não conectada')]);
+        }
+
+        return campaingsContract.getAllCampaigns();
+    });
     
 
     const getAllCampaings = useCallback(async () => {
-        if (!signer)
+        if (!signer || !campaingsContract)
             return;
 
         fetchData();
-    }, [signer]);
+    }, [signer, campaingsContract]);
 
     const viewCampaingWithId = (id: bigint) => {
         const searchParam = new URLSearchParams();
@@ -119,29 +124,18 @@ export function Campaings() {
     }
 
 
-    /**
-     * Registrando a função para quando receber um evento de 
-     * campainha. Isso vai buscar as campanhas novamente.
-     */
-    campaingsContract.onCreateCampaign(getAllCampaings);
-
-    /**
-     * Esse useEffect é utilizado para limpar o listener
-     * do evento.
-     */
     useEffect(() => {
+        if (!signer || !campaingsContract) return;
+
+        campaingsContract.onCreateCampaign(getAllCampaings);
         return () => {
             campaingsContract.removeCreateCampaign(getAllCampaings);
         }
-    }, []);
+    }, [signer, getAllCampaings, campaingsContract]);
 
-    /**
-     * Assim que tivermos a conexão com a carteira podemos 
-     * buscar as campanhas.
-     */
-    useEffect(() => { 
-        getAllCampaings(); 
-    }, [signer]);
+    useEffect(() => {
+        getAllCampaings();
+    }, [getAllCampaings]);
 
     /**
      * Se a requisição estiver em loadding, vamos mostrar um 

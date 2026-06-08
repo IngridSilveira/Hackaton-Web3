@@ -22,7 +22,7 @@ public class UserEventPublisher implements UserEventPort, UserEventStreamPort {
 
     private final Sinks.Many<User> sink = Sinks.many()
             .multicast()
-            .onBackpressureBuffer();
+            .onBackpressureBuffer(256, false);
 
     @Override
     public void publish(User user) {

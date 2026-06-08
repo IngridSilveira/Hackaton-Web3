@@ -26,7 +26,7 @@ export function SignUp() {
     const submitForm: SubmitEventHandler<HTMLFormElement> = async (event) => {
         event.preventDefault();
         
-        const [tx, err] = await signUpContract.signUp(username, Number(userType));
+        const [, err] = await signUpContract.signUp(username, Number(userType));
 
         if (err) {
             toast.error(err.reason);

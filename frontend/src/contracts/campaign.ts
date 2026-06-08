@@ -1,4 +1,4 @@
-import type { CallbackCampaignCreated, ResultRequestEventsCampaign, CampaignType } from '../types/campaing';
+import type { CallbackCampaignCreated, CampaignType } from '../types/campaing';
 import { ethers } from 'ethers';
 
 

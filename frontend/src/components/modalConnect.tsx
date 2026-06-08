@@ -1,10 +1,9 @@
 import { AlertCircle } from 'lucide-react'
 import { useCallback, useEffect, type FC } from 'react';
 
-
 import { useWallet, StateConnection } from '../hooks/useWallet';
-
 import { useWalletStore } from '../stores/useWalletStore';
+import { authenticateWallet, requestNonce } from '../services/backend';
 import { Button } from '@/components/ui/button';
 import { CircleLoadding } from './circleLoadding';
 import { ContractException } from '../exceptions/ContractException';
@@ -67,6 +66,7 @@ const ModalNotConnected: FC<ModalNotConnectedProps> = (props: ModalNotConnectedP
 
 export const ModalConnect = () => {
     const setSignerAndProvider = useWalletStore(state => state.setSignerAndProvider);
+    const setToken = useWalletStore(state => state.setToken);
     const { connection, error, handlerConnectionWallet } = useWallet();
 
 
@@ -76,8 +76,22 @@ export const ModalConnect = () => {
         if (!signer)
             return;
 
-        setSignerAndProvider(signer, provider);
-    }, []);
+        try {
+            const address = await signer.getAddress();
+            const { message } = await requestNonce(address);
+            const signature = await signer.signMessage(message);
+            const auth = await authenticateWallet(address, signature, message);
+
+            setToken(auth.token);
+            setSignerAndProvider(signer, provider);
+        }
+        catch (err: any) {
+            if (err instanceof ContractException) {
+                throw err;
+            }
+            throw new ContractException(err?.message ?? 'Erro ao autenticar com o backend');
+        }
+    }, [handlerConnectionWallet, setSignerAndProvider, setToken]);
 
 
     /**
@@ -86,7 +100,7 @@ export const ModalConnect = () => {
      */
     useEffect(() => {
         connnectWallet();
-    }, []);
+    }, [connnectWallet]);
 
     switch (connection) {
         case StateConnection.CONNECTING: return <ModalConnecting description="Conectando sua carteira..." />
