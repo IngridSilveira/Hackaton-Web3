@@ -5,7 +5,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { Home } from './pages/home';
 import { SignUp } from './pages/signUp';
 import { Donate } from './pages/donate';
-import { GovernancePage } from './pages/governance';
+import GovernancePage from './pages/governance';
 
 
 export const routes = createBrowserRouter([

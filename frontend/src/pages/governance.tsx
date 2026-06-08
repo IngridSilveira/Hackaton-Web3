@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useWalletStore } from '../stores/useWalletStore';
-import { useUserStore } from '../stores/useUserStore';
 import {
   GovernanceContract,
   type ProposalData,
@@ -15,7 +14,6 @@ import { CircleLoadding } from '../components/circleLoadding';
 
 export default function GovernancePage() {
   const { signer, provider, address, connected } = useWalletStore();
-  const { user } = useUserStore();
 
   // Contract & UI State
   const [governance, setGovernance] = useState<GovernanceContract | null>(null);
@@ -132,8 +130,8 @@ export default function GovernancePage() {
     // Extract params from description or proposal data
     const [txHash, execErr] = await governance.executeProposal(
       proposal.id,
-      proposal.proposer,
-      proposal.forVotes,
+      proposal.ongWallet,
+      proposal.amount,
       proposal.description
     );
 
@@ -189,7 +187,7 @@ export default function GovernancePage() {
         {success && <SuccessBox message={success} />}
 
         {/* Loading */}
-        {loading && <CircleLoading />}
+        {loading && <CircleLoadding description="A carregar dados da governança..." />}
 
         {/* Create Proposal */}
         <div className="mb-8">

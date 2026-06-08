@@ -8,6 +8,9 @@ export interface ProposalData {
   id: string;
   proposer: string;
   description: string;
+  // Campos necessários para reconstituir o calldata no execute()
+  ongWallet: string;
+  amount: bigint;
   forVotes: bigint;
   againstVotes: bigint;
   abstainVotes: bigint;
@@ -153,7 +156,7 @@ export class GovernanceContract {
         return [null, new ContractException('Voting transaction failed')];
       }
 
-      return [receipt.transactionHash, null];
+      return [receipt.hash, null];
     } catch (err) {
       let message = 'Failed to vote';
       if (typeof err === 'object' && err && 'reason' in err && err.reason != null) {
@@ -213,7 +216,7 @@ export class GovernanceContract {
         return [null, new ContractException('Execution transaction failed')];
       }
 
-      return [receipt.transactionHash, null];
+      return [receipt.hash, null];
     } catch (err) {
       let message = 'Failed to execute proposal';
       if (typeof err === 'object' && err && 'reason' in err && err.reason != null) {
@@ -232,7 +235,7 @@ export class GovernanceContract {
         return [null, new ContractException('Delegation transaction failed')];
       }
 
-      return [receipt.transactionHash, null];
+      return [receipt.hash, null];
     } catch (err) {
       let message = 'Failed to delegate votes';
       if (typeof err === 'object' && err && 'reason' in err && err.reason != null) {

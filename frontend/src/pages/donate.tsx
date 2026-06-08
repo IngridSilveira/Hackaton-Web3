@@ -17,7 +17,6 @@ import { ethers } from "ethers";
 import { ErrorBox } from "../components/errorBox";
 import { SignUpContract } from "../contracts/signUp";
 import { DonateContract } from "../contracts/donate";
-import { handlerBlockchainLogs } from "../utils/events";
 import { Events } from "../contracts/events";
 import { CircleLoadding } from "../components/circleLoadding";
 
@@ -50,7 +49,7 @@ function UserInformation({ creator }: UserInformationProps) {
     const signer = useWalletStore(state => state.signer);
 
     const signUpContract = new SignUpContract(signer!);
-    const { state, data, error, fetchData } = useRequest<UserType>(() => signUpContract.getUser(creator));
+    const { state, data, fetchData } = useRequest<UserType>(() => signUpContract.getUser(creator));
 
     /**
      * Isso vai buscar o nome de quem criou a campanha.
@@ -67,7 +66,7 @@ function UserInformation({ creator }: UserInformationProps) {
 
     return (
         <p className="text-xs">
-            Criado por: <span className="font-bold">{ data?.username }</span>
+            Criado por: <span className="font-bold">{data?.username}</span>
         </p>
     );
 }
@@ -85,7 +84,6 @@ interface CampaingsInformationsProps {
 function CampaingsInformations(props: CampaingsInformationsProps) {
 
     const {
-        id,
         title,
         goalAmount,
         currentAmount,
@@ -100,24 +98,24 @@ function CampaingsInformations(props: CampaingsInformationsProps) {
 
     return (
         <>
-            <p className={`text-xs py-1 px-2 font-semibold rounded w-min text-nowrap ${ isActivity ? 'bg-green-300' : 'bg-red-300'}`}>
-                { isActivity ? 'Recebendo doações' : 'Prazo de doação finalizado' }
+            <p className={`text-xs py-1 px-2 font-semibold rounded w-min text-nowrap ${isActivity ? 'bg-green-300' : 'bg-red-300'}`}>
+                {isActivity ? 'Recebendo doações' : 'Prazo de doação finalizado'}
             </p>
-            <p className="mt-5 text-2xl">{ title }</p>
+            <p className="mt-5 text-2xl">{title}</p>
             <p className="flex gap-2 items-center mt-5">
-                <PiggyBank /> 
-                Valor arrecadado: <span className="font-bold">{ ethers.formatEther(currentAmount) } ETH</span>
+                <PiggyBank />
+                Valor arrecadado: <span className="font-bold">{ethers.formatEther(currentAmount)} ETH</span>
             </p>
             <p className="flex gap-2 items-center mt-2">
-                <Landmark /> 
-                Valor desejado: <span className="font-bold">{ ethers.formatEther(goalAmount) } ETH</span>
+                <Landmark />
+                Valor desejado: <span className="font-bold">{ethers.formatEther(goalAmount)} ETH</span>
             </p>
 
             <div className="mt-5 flex items-center gap-2">
                 <div className="min-w-10 min-h-10 rounded-full bg-gray-500"></div>
                 <div>
                     <UserInformation creator={creator} />
-                    <p className="text-xs">{ ptCreated }</p>
+                    <p className="text-xs">{ptCreated}</p>
                 </div>
             </div>
         </>
@@ -142,20 +140,20 @@ function LoaddingFormDonation() {
 function MakeDonationForm(props: MakeDonationFormProps) {
 
     const {
-        campaignId, 
+        campaignId,
         onDonationReceived,
     } = props;
 
     const signer = useWalletStore(state => state.signer);
     const [amount, setAmount] = useState('');
-    
+
     /**
      * Contrato de donate para fazer uma doação para uma 
      * campanha.
      */
     const donateContract = new DonateContract(signer!);
     const { state, error, data, fetchData } = useRequest((campaign: bigint, amount: bigint) => donateContract.donate(campaign, amount));
-    
+
 
     const handlerMakedonate: SubmitEventHandler<HTMLFormElement> = (event) => {
         event.preventDefault();
@@ -181,21 +179,21 @@ function MakeDonationForm(props: MakeDonationFormProps) {
     return (
         <form action="#" className="mt-5" onSubmit={handlerMakedonate}>
 
-            { 
-                state == RequestState.ERROR 
-                ? <ErrorBox message={error!.message} />
-                : null
+            {
+                state == RequestState.ERROR
+                    ? <ErrorBox message={error!.message} />
+                    : null
             }
 
-            <Label 
-                htmlFor="values" 
+            <Label
+                htmlFor="values"
                 className="mb-2">
-                    Valor: 
+                Valor:
             </Label>
 
-            <Input 
-                id="values" 
-                type="number" 
+            <Input
+                id="values"
+                type="number"
                 onChange={(e: any) => setAmount(e.target.value)}
                 disabled={state == RequestState.LOADDING} />
 
@@ -223,7 +221,7 @@ function EventItem(props: EventItemProps) {
         return (
             <div className="flex items-center gap-3">
                 <div className="p-3 border rounded-full">
-                    { icons[event.name] }
+                    {icons[event.name]}
                 </div>
 
                 <div>
@@ -231,8 +229,8 @@ function EventItem(props: EventItemProps) {
                         Aqui Inicia a Jornada!
                     </p>
                     <small>
-                        Aqui a campanha <b>{ event.args.title }</b> foi criada! Com um objetivo 
-                        de arrecadar <b>{ ethers.formatEther(event.args.goalAmount) } ETH</b>
+                        Aqui a campanha <b>{event.args.title}</b> foi criada! Com um objetivo
+                        de arrecadar <b>{ethers.formatEther(event.args.goalAmount)} ETH</b>
                     </small>
                 </div>
             </div>
@@ -243,7 +241,7 @@ function EventItem(props: EventItemProps) {
         return (
             <div className="flex items-center gap-3">
                 <div className="p-3 border rounded-full">
-                    { icons[event.name] }
+                    {icons[event.name]}
                 </div>
 
                 <div>
@@ -251,7 +249,7 @@ function EventItem(props: EventItemProps) {
                         Doação recebida!
                     </p>
                     <small>
-                        Foi feita uma doação no valor de <b>{ ethers.formatEther(event.args.amount) } ETH</b>
+                        Foi feita uma doação no valor de <b>{ethers.formatEther(event.args.amount)} ETH</b>
                     </small>
                 </div>
             </div>
@@ -270,12 +268,12 @@ function EventsList(props: EventsListProps) {
 
     return (
         <ul>
-            { 
+            {
                 events.map((event, index) => (
                     <li key={index} className="mt-5">
-                        <EventItem event={ event } />
+                        <EventItem event={event} />
                     </li>
-                )) 
+                ))
             }
         </ul>
     );
@@ -311,7 +309,7 @@ function CampaignHistory({ campaignId }: CampaignHistoryProps) {
      * Os eventos seram formatados e em seguida exibidos.
      */
     useEffect(() => {
-        if (state == RequestState.SUCESS && data && data.length > 0) 
+        if (state == RequestState.SUCESS && data && data.length > 0)
             handlerCampaignEvents();
     }, [state]);
 
@@ -323,26 +321,26 @@ function CampaignHistory({ campaignId }: CampaignHistoryProps) {
             </h2>
 
             <p className="text-base mt-2">
-                Aqui você pode ver quem fez doações, solicitações de saque, 
+                Aqui você pode ver quem fez doações, solicitações de saque,
                 votações e milestones.
             </p>
 
-            { 
-                state == RequestState.ERROR 
-                ? <ErrorBox message={error!.message} />
-                : null
+            {
+                state == RequestState.ERROR
+                    ? <ErrorBox message={error!.message} />
+                    : null
             }
 
             {
                 state == RequestState.LOADDING
-                ? <CircleLoadding description="Carregando histórico" />
-                : null
+                    ? <CircleLoadding description="Carregando histórico" />
+                    : null
             }
 
             {
-                state == RequestState.SUCESS && data 
-                ? <EventsList events={campaignEvents} />
-                : null
+                state == RequestState.SUCESS && data
+                    ? <EventsList events={campaignEvents} />
+                    : null
             }
         </div>
     );
@@ -352,15 +350,17 @@ function CampaignHistory({ campaignId }: CampaignHistoryProps) {
 export function Donate() {
     const navigate = useNavigate();
     const [params,] = useSearchParams();
-    
+
     const id = params.get('id');
 
     /**
      * Se não tiver um id no query param, o usuario 
      * será redirecionado para a pagina anterior.
      */
-    if (!id)
-        return navigate(-1);
+    if (!id) {
+        navigate(-1);
+        return null;
+    }
 
     const signer = useWalletStore(state => state.signer);
 
@@ -398,17 +398,17 @@ export function Donate() {
                     <div className="position-stick top-5">
                         <div className="shadow-md rounded-xl p-4">
 
-                            { 
+                            {
                                 state == RequestState.LOADDING || !data
-                                ? <LoaddingCampaingsInformations /> 
-                                : <CampaingsInformations
-                                    id={data!.id}
-                                    title={data!.title}
-                                    goalAmount={data!.goalAmount}
-                                    currentAmount={data!.currentAmount}
-                                    creator={data!.creator}
-                                    deadline={data!.deadline}
-                                    createdAt={data!.createdAt}  /> 
+                                    ? <LoaddingCampaingsInformations />
+                                    : <CampaingsInformations
+                                        id={data!.id}
+                                        title={data!.title}
+                                        goalAmount={data!.goalAmount}
+                                        currentAmount={data!.currentAmount}
+                                        creator={data!.creator}
+                                        deadline={data!.deadline}
+                                        createdAt={data!.createdAt} />
                             }
                         </div>
 
@@ -418,17 +418,17 @@ export function Donate() {
 
                             {
                                 state == RequestState.LOADDING || !data
-                                ? <LoaddingFormDonation />
-                                : <MakeDonationForm campaignId={data!.id} onDonationReceived={handlerFetchData} />
+                                    ? <LoaddingFormDonation />
+                                    : <MakeDonationForm campaignId={data!.id} onDonationReceived={handlerFetchData} />
                             }
                         </div>
                     </div>
                 </div>
 
                 {
-                    state == RequestState.LOADDING || !data 
-                    ? null
-                    : <CampaignHistory campaignId={data!.id} />
+                    state == RequestState.LOADDING || !data
+                        ? null
+                        : <CampaignHistory campaignId={data!.id} />
                 }
             </div>
         </div>
