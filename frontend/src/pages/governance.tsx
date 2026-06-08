@@ -1,64 +1,65 @@
 import { useEffect, useState } from 'react';
 import { useWalletStore } from '../stores/useWalletStore';
-import { GovernanceContract, type ProposalListItem, type GovernanceResult } from '../contracts/governance';
+import { useUserStore } from '../stores/useUserStore';
+import {
+  GovernanceContract,
+  type ProposalData,
+  type CreateProposalParams,
+  type ProposalState,
+} from '../contracts/governance';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { SuccessBox } from '../components/successBox';
 import { ErrorBox } from '../components/errorBox';
+import { CircleLoadding } from '../components/circleLoadding';
 
 export default function GovernancePage() {
   const { signer, provider, address, connected } = useWalletStore();
+  const { user } = useUserStore();
 
-  // State
-  const [governanceContract, setGovernanceContract] = useState<GovernanceContract | null>(null);
-  const [proposals, setProposals] = useState<ProposalListItem[]>([]);
+  // Contract & UI State
+  const [governance, setGovernance] = useState<GovernanceContract | null>(null);
   const [votingPower, setVotingPower] = useState<bigint>(0n);
+  const [proposals, setProposals] = useState<ProposalData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Form state
-  const [formOpen, setFormOpen] = useState(false);
-  const [formLoading, setFormLoading] = useState(false);
-  const [proposalForm, setProposalForm] = useState({
-    title: '',
+  // Form State
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    campaignId: '',
+    ongWallet: '',
+    amount: '',
     description: '',
-    targetAddress: '',
-    functionSignature: '',
-    calldata: '',
   });
+  const [submitting, setSubmitting] = useState(false);
 
-  // Initialize contract
+  // Initialize
   useEffect(() => {
     if (signer && provider && connected) {
-      setGovernanceContract(new GovernanceContract(signer, provider));
+      setGovernance(new GovernanceContract(signer, provider));
     }
   }, [signer, provider, connected]);
 
-  // Load proposals and voting power
+  // Load Data
   useEffect(() => {
-    if (!governanceContract) return;
+    if (!governance || !address) return;
 
     const loadData = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        // Load proposals
-        const [proposals, proposalError] = await governanceContract.listProposals(20);
-        if (proposalError) {
-          setError(proposalError.message);
-        } else if (proposals) {
-          setProposals(proposals);
+        // Fetch voting power
+        const [power, powerErr] = await governance.getVotingPower(address);
+        if (!powerErr && power !== null) {
+          setVotingPower(power);
         }
 
-        // Load voting power
-        if (address) {
-          const [power, powerError] = await governanceContract.getVotingPower(address);
-          if (!powerError && power !== null) {
-            setVotingPower(power);
-          }
-        }
+        // TODO: Fetch proposals from subgraph or contract events
+        // For now, we'll use an empty array
+        setProposals([]);
       } catch (err) {
         setError('Failed to load governance data');
       } finally {
@@ -67,96 +68,118 @@ export default function GovernancePage() {
     };
 
     loadData();
-    const interval = setInterval(loadData, 30000); // Refresh every 30s
+    const interval = setInterval(loadData, 30000);
     return () => clearInterval(interval);
-  }, [governanceContract, address]);
+  }, [governance, address]);
+
+  const handleCreateProposal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!governance || !address) return;
+
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const params: CreateProposalParams = {
+        campaignId: formData.campaignId,
+        ongWallet: formData.ongWallet,
+        amount: BigInt(formData.amount),
+        description: formData.description,
+      };
+
+      const [proposalId, createErr] = await governance.createProposal(params);
+
+      if (createErr) {
+        setError(createErr.message);
+      } else if (proposalId) {
+        setSuccess(`Proposal created with ID: ${proposalId.slice(0, 10)}...`);
+        setFormData({ campaignId: '', ongWallet: '', amount: '', description: '' });
+        setShowForm(false);
+      }
+    } catch (err) {
+      setError('Unexpected error creating proposal');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleVote = async (proposalId: string, support: 0 | 1 | 2) => {
-    if (!governanceContract) return;
+    if (!governance) return;
 
     setLoading(true);
     setError(null);
     setSuccess(null);
 
-    const [result, voteError] = await governanceContract.castVote(proposalId, support);
+    const [txHash, voteErr] = await governance.castVote(proposalId, support);
 
-    if (voteError) {
-      setError(voteError.message);
-    } else if (result) {
-      setSuccess('Vote cast successfully');
-      // Refresh proposals
-      const [updated, _] = await governanceContract.listProposals(20);
-      if (updated) setProposals(updated);
+    if (voteErr) {
+      setError(voteErr.message);
+    } else if (txHash) {
+      setSuccess(`Vote cast successfully: ${txHash.slice(0, 10)}...`);
     }
 
     setLoading(false);
   };
 
-  const handleCreateProposal = async () => {
-    if (!governanceContract) return;
+  const handleExecute = async (proposal: ProposalData) => {
+    if (!governance) return;
 
-    setFormLoading(true);
+    setLoading(true);
     setError(null);
     setSuccess(null);
 
-    try {
-      const createResult = await governanceContract.createProposal({
-        targets: [proposalForm.targetAddress],
-        values: [0n],
-        signatures: [proposalForm.functionSignature],
-        calldatas: [proposalForm.calldata],
-        description: proposalForm.description,
-      });
+    // Extract params from description or proposal data
+    const [txHash, execErr] = await governance.executeProposal(
+      proposal.id,
+      proposal.proposer,
+      proposal.forVotes,
+      proposal.description
+    );
 
-      const [result, createError] = createResult as GovernanceResult<string>;
-
-      if (createError) {
-        setError(createError.message);
-      } else if (result) {
-        setSuccess(`Proposal created with ID: ${result}`);
-        setProposalForm({ title: '', description: '', targetAddress: '', functionSignature: '', calldata: '' });
-        setFormOpen(false);
-
-        // Refresh proposals
-        const [updated, _] = await governanceContract.listProposals(20);
-        if (updated) setProposals(updated);
-      }
-    } catch (err) {
-      setError('Failed to create proposal');
-    } finally {
-      setFormLoading(false);
+    if (execErr) {
+      setError(execErr.message);
+    } else if (txHash) {
+      setSuccess(`Proposal executed: ${txHash.slice(0, 10)}...`);
     }
+
+    setLoading(false);
   };
 
   if (!connected) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 p-8">
-        <div className="max-w-6xl mx-auto text-center">
-          <h1 className="text-4xl font-bold text-white mb-4">Governance</h1>
-          <p className="text-xl text-slate-300">Please connect your wallet to participate in governance</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
+        <div className="max-w-4xl mx-auto text-center mt-20">
+          <h1 className="text-5xl font-bold text-white mb-4">DAO Governance</h1>
+          <p className="text-xl text-slate-300">Connect your wallet to participate</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-800 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Governance</h1>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <p className="text-slate-400 text-sm">Voting Power</p>
-              <p className="text-2xl font-bold text-white">{votingPower.toString()}</p>
+          <h1 className="text-4xl font-bold text-white mb-6">DAO Governance</h1>
+
+          {/* Stats */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg p-6 border border-slate-600">
+              <p className="text-slate-400 text-sm font-medium uppercase">Voting Power</p>
+              <p className="text-4xl font-bold text-white mt-2">
+                {(Number(votingPower) / 1e18).toFixed(2)}
+              </p>
+              <p className="text-xs text-slate-400 mt-2">IMPACT Tokens</p>
             </div>
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <p className="text-slate-400 text-sm">Active Proposals</p>
-              <p className="text-2xl font-bold text-white">{proposals.filter(p => p.state === 'Active').length}</p>
-            </div>
-            <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-              <p className="text-slate-400 text-sm">Total Proposals</p>
-              <p className="text-2xl font-bold text-white">{proposals.length}</p>
+
+            <div className="bg-gradient-to-br from-slate-800 to-slate-700 rounded-lg p-6 border border-slate-600">
+              <p className="text-slate-400 text-sm font-medium uppercase">Active Proposals</p>
+              <p className="text-4xl font-bold text-white mt-2">
+                {proposals.filter(p => p.state === 'Active').length}
+              </p>
+              <p className="text-xs text-slate-400 mt-2">of {proposals.length} total</p>
             </div>
           </div>
         </div>
@@ -165,83 +188,86 @@ export default function GovernancePage() {
         {error && <ErrorBox message={error} />}
         {success && <SuccessBox message={success} />}
 
-        {/* Create Proposal Button */}
+        {/* Loading */}
+        {loading && <CircleLoading />}
+
+        {/* Create Proposal */}
         <div className="mb-8">
           <Button
-            onClick={() => setFormOpen(!formOpen)}
-            className="w-full md:w-auto"
+            onClick={() => setShowForm(!showForm)}
+            className="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors"
           >
-            {formOpen ? 'Cancel' : 'Create Proposal'}
+            {showForm ? 'Cancel' : 'Create Proposal'}
           </Button>
         </div>
 
-        {/* Create Proposal Form */}
-        {formOpen && (
-          <div className="bg-slate-800 rounded-lg p-6 border border-slate-700 mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4">New Proposal</h2>
-            <div className="space-y-4">
+        {/* Form */}
+        {showForm && (
+          <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 mb-8">
+            <h2 className="text-2xl font-bold text-white mb-6">New Withdrawal Proposal</h2>
+
+            <form onSubmit={handleCreateProposal} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Title</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Campaign ID
+                </label>
                 <Input
                   type="text"
-                  value={proposalForm.title}
-                  onChange={(e) => setProposalForm({ ...proposalForm, title: e.target.value })}
-                  placeholder="Proposal title"
+                  value={formData.campaignId}
+                  onChange={e => setFormData({ ...formData, campaignId: e.target.value })}
+                  placeholder="Enter campaign ID"
+                  required
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Description</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  ONG Wallet Address
+                </label>
+                <Input
+                  type="text"
+                  value={formData.ongWallet}
+                  onChange={e => setFormData({ ...formData, ongWallet: e.target.value })}
+                  placeholder="0x..."
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Amount (Wei)
+                </label>
+                <Input
+                  type="number"
+                  value={formData.amount}
+                  onChange={e => setFormData({ ...formData, amount: e.target.value })}
+                  placeholder="0"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-300 mb-2">
+                  Description
+                </label>
                 <textarea
-                  value={proposalForm.description}
-                  onChange={(e) => setProposalForm({ ...proposalForm, description: e.target.value })}
-                  placeholder="Proposal description and rationale"
+                  value={formData.description}
+                  onChange={e => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Proposal details and rationale..."
                   className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Target Address</label>
-                  <Input
-                    type="text"
-                    value={proposalForm.targetAddress}
-                    onChange={(e) => setProposalForm({ ...proposalForm, targetAddress: e.target.value })}
-                    placeholder="0x..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-300 mb-2">Function Signature</label>
-                  <Input
-                    type="text"
-                    value={proposalForm.functionSignature}
-                    onChange={(e) => setProposalForm({ ...proposalForm, functionSignature: e.target.value })}
-                    placeholder="functionName(uint256,string)"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-300 mb-2">Calldata (hex)</label>
-                <textarea
-                  value={proposalForm.calldata}
-                  onChange={(e) => setProposalForm({ ...proposalForm, calldata: e.target.value })}
-                  placeholder="0x..."
-                  className="w-full bg-slate-700 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                  rows={2}
+                  required
                 />
               </div>
 
               <Button
-                onClick={handleCreateProposal}
-                disabled={formLoading || !proposalForm.title || !proposalForm.description}
-                className="w-full"
+                type="submit"
+                disabled={submitting || !formData.campaignId || !formData.ongWallet || !formData.amount}
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
               >
-                {formLoading ? 'Creating...' : 'Submit Proposal'}
+                {submitting ? 'Submitting...' : 'Submit Proposal'}
               </Button>
-            </div>
+            </form>
           </div>
         )}
 
@@ -249,107 +275,116 @@ export default function GovernancePage() {
         <div>
           <h2 className="text-2xl font-bold text-white mb-6">Proposals</h2>
 
-          {loading ? (
-            <div className="text-center text-slate-400">Loading proposals...</div>
-          ) : proposals.length === 0 ? (
-            <div className="text-center text-slate-400">No proposals yet</div>
+          {proposals.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-slate-400 text-lg">No proposals yet</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 gap-6">
-              {proposals.map((proposal) => (
-                <div
+              {proposals.map(proposal => (
+                <ProposalCard
                   key={proposal.id}
-                  className="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-slate-600 transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-white">{proposal.description}</h3>
-                      <p className="text-sm text-slate-400 mt-2">Proposer: {proposal.proposer.slice(0, 10)}...</p>
-                    </div>
-                    <span
-                      className={`px-3 py-1 rounded text-xs font-semibold ${
-                        proposal.state === 'Active'
-                          ? 'bg-blue-900 text-blue-200'
-                          : proposal.state === 'Executed'
-                            ? 'bg-green-900 text-green-200'
-                            : proposal.state === 'Defeated'
-                              ? 'bg-red-900 text-red-200'
-                              : 'bg-slate-700 text-slate-300'
-                      }`}
-                    >
-                      {proposal.state}
-                    </span>
-                  </div>
-
-                  {/* Vote Stats */}
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div>
-                      <p className="text-sm text-slate-400">For</p>
-                      <p className="text-lg font-bold text-green-400">{proposal.forVotes.toString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Against</p>
-                      <p className="text-lg font-bold text-red-400">{proposal.againstVotes.toString()}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Abstain</p>
-                      <p className="text-lg font-bold text-slate-400">{proposal.abstainVotes.toString()}</p>
-                    </div>
-                  </div>
-
-                  {/* Progress Bars */}
-                  <div className="space-y-2 mb-6">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 bg-slate-700 rounded h-2">
-                        <div
-                          className="bg-green-500 h-2 rounded"
-                          style={{
-                            width: `${
-                              Number(proposal.forVotes) + Number(proposal.againstVotes) > 0
-                                ? (Number(proposal.forVotes) /
-                                    (Number(proposal.forVotes) + Number(proposal.againstVotes))) *
-                                  100
-                                : 0
-                            }%`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-xs text-slate-400">
-                        {proposal.forVotes.toString()} / {(proposal.forVotes + proposal.againstVotes).toString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  {proposal.state === 'Active' && (
-                    <div className="flex gap-3">
-                      <Button
-                        onClick={() => handleVote(proposal.id, 1)}
-                        disabled={loading}
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                      >
-                        Support
-                      </Button>
-                      <Button
-                        onClick={() => handleVote(proposal.id, 0)}
-                        disabled={loading}
-                        className="flex-1 bg-red-600 hover:bg-red-700"
-                      >
-                        Reject
-                      </Button>
-                      <Button
-                        onClick={() => handleVote(proposal.id, 2)}
-                        disabled={loading}
-                        className="flex-1 bg-slate-600 hover:bg-slate-700"
-                      >
-                        Abstain
-                      </Button>
-                    </div>
-                  )}
-                </div>
+                  proposal={proposal}
+                  onVote={handleVote}
+                  onExecute={handleExecute}
+                  isLoading={loading}
+                />
               ))}
             </div>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+interface ProposalCardProps {
+  proposal: ProposalData;
+  onVote: (id: string, support: 0 | 1 | 2) => Promise<void>;
+  onExecute: (proposal: ProposalData) => Promise<void>;
+  isLoading: boolean;
+}
+
+function ProposalCard({ proposal, onVote, onExecute, isLoading }: ProposalCardProps) {
+  const stateColors: Record<ProposalState, string> = {
+    Pending: 'bg-yellow-900 text-yellow-200',
+    Active: 'bg-blue-900 text-blue-200',
+    Canceled: 'bg-gray-900 text-gray-200',
+    Defeated: 'bg-red-900 text-red-200',
+    Succeeded: 'bg-green-900 text-green-200',
+    Queued: 'bg-purple-900 text-purple-200',
+    Executed: 'bg-emerald-900 text-emerald-200',
+  };
+
+  const total = Number(proposal.forVotes) + Number(proposal.againstVotes);
+  const forPercent = total > 0 ? (Number(proposal.forVotes) / total) * 100 : 0;
+
+  return (
+    <div className="bg-slate-800 border border-slate-600 rounded-lg p-6 hover:border-slate-500 transition-colors">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1">
+          <h3 className="text-xl font-bold text-white">{proposal.description}</h3>
+          <p className="text-sm text-slate-400 mt-1">
+            Proposer: {proposal.proposer.slice(0, 10)}...
+          </p>
+        </div>
+        <span
+          className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap ml-4 ${
+            stateColors[proposal.state]
+          }`}
+        >
+          {proposal.state}
+        </span>
+      </div>
+
+      {/* Vote Stats */}
+      <div className="mb-6">
+        <div className="flex justify-between mb-2">
+          <span className="text-sm text-slate-400">
+            For: <span className="text-green-400 font-semibold">{proposal.forVotes.toString()}</span>
+          </span>
+          <span className="text-sm text-slate-400">
+            Against: <span className="text-red-400 font-semibold">{proposal.againstVotes.toString()}</span>
+          </span>
+        </div>
+        <div className="w-full bg-slate-700 rounded-full h-2 overflow-hidden">
+          <div
+            className="bg-gradient-to-r from-green-500 to-green-600 h-full transition-all duration-500"
+            style={{ width: `${forPercent}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex gap-3 flex-wrap">
+        {proposal.state === 'Active' && (
+          <>
+            <Button
+              onClick={() => onVote(proposal.id, 1)}
+              disabled={isLoading}
+              className="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Support
+            </Button>
+            <Button
+              onClick={() => onVote(proposal.id, 0)}
+              disabled={isLoading}
+              className="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+            >
+              Reject
+            </Button>
+          </>
+        )}
+
+        {proposal.state === 'Succeeded' && (
+          <Button
+            onClick={() => onExecute(proposal)}
+            disabled={isLoading}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors disabled:opacity-50"
+          >
+            Execute Withdrawal
+          </Button>
+        )}
       </div>
     </div>
   );
