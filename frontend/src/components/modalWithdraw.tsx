@@ -110,14 +110,20 @@ export function ModalWithdraw(props: ModalWithdrawProps) {
 
                 <form className="mt-5" action="#" method="POST" onSubmit={handlerSubmitForm}>
                     {
-                        !isUploadding
-                        ? <FormFields onFile={(file) => setFile(file)} />
-                        : <CircleLoadding description={`Salvando arquivo! ${progress}%`} />
+                        isUploadding
+                        ? <CircleLoadding description={`Salvando arquivo! ${progress}%`} />
+                        : null
                     }
                     
                     {
                         state == RequestState.LOADDING 
                         ? <CircleLoadding description="Solicitando saque!" /> 
+                        : null
+                    }
+
+                    {
+                        !isUploadding && [RequestState.NONE, RequestState.SUCESS].includes(state)  
+                        ? <FormFields onFile={(file) => setFile(file)} />
                         : null
                     }
 
