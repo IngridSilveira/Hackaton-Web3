@@ -1,3 +1,5 @@
+import { ethers } from "ethers";
+
 import type { CampaignType, EventType } from "../types/campaing";
 import type { UserType } from "../types/user";
 
@@ -13,14 +15,13 @@ import { Label } from "@/components/ui/label";
 import { useWalletStore } from "../stores/useWalletStore";
 import { CampaignContract } from "../contracts/campaign";
 import { RequestState, useRequest } from "../hooks/useRequest";
-import { ethers } from "ethers";
 import { ErrorBox } from "../components/errorBox";
 import { SignUpContract } from "../contracts/signUp";
 import { DonateContract } from "../contracts/donate";
-import { handlerBlockchainLogs } from "../utils/events";
 import { Events } from "../contracts/events";
 import { CircleLoadding } from "../components/circleLoadding";
 
+import { ModalWithdraw } from "../components/modalWithdraw";
 
 
 function LoaddingCampaingsInformations() {
@@ -83,6 +84,8 @@ interface CampaingsInformationsProps {
 }
 
 function CampaingsInformations(props: CampaingsInformationsProps) {
+    const [visible, setVisible] = useState(false);
+    const loggedUser = useWalletStore(state => state.address);
 
     const {
         id,
@@ -98,11 +101,26 @@ function CampaingsInformations(props: CampaingsInformationsProps) {
     const isActivity = Date.now() < ethers.toNumber(deadline) * 1000;
 
 
+    const handlerOpenModal = useCallback((visible: boolean) => {
+        setVisible(visible)
+    }, []);
+
     return (
         <>
-            <p className={`text-xs py-1 px-2 font-semibold rounded w-min text-nowrap ${ isActivity ? 'bg-green-300' : 'bg-red-300'}`}>
-                { isActivity ? 'Recebendo doações' : 'Prazo de doação finalizado' }
-            </p>
+            { visible ? <ModalWithdraw onClose={handlerOpenModal} /> : null }
+
+            <div className="w-full flex items-center justify-between">
+                <p className={`text-xs py-1 px-2 font-semibold rounded w-min text-nowrap ${ isActivity ? 'bg-green-300' : 'bg-red-300'}`}>
+                    { isActivity ? 'Recebendo doações' : 'Prazo de doação finalizado' }
+                </p>
+
+                {
+                    loggedUser == creator 
+                    ? (<Button onClick={() => handlerOpenModal(true)}>Solicitar Saque</Button>)
+                    : null
+                }
+            </div>
+
             <p className="mt-5 text-2xl">{ title }</p>
             <p className="flex gap-2 items-center mt-5">
                 <PiggyBank /> 
