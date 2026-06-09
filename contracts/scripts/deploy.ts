@@ -17,11 +17,31 @@ async function deploySignUp() {
 }
 
 
-async function deployDonate() {
+/**
+ * Função para realizar o deploy do ImpactToken.
+ * O ImpactToken deve ser deployado ANTES do Donate,
+ * pois o Donate recebe seu endereço no construtor.
+ */
+async function deployImpactToken() {
+    const ImpactToken = await ethers.getContractFactory('ImpactToken');
+    const impactToken = await ImpactToken.deploy();
+    await impactToken.waitForDeployment();
+
+    const impactTokenAddress = await impactToken.getAddress();
+
+    return { impactToken, impactTokenAddress };
+}
+
+
+/**
+ * Função para realizar o deploy do contrato de Donate.
+ * Recebe o endereço do ImpactToken para que possa mintar tokens aos doadores.
+ */
+async function deployDonate(impactTokenAddress: string) {
     const Donate = await ethers.getContractFactory('Donate');
-    const donate = await Donate.deploy();
+    const donate = await Donate.deploy(impactTokenAddress);
     await donate.waitForDeployment();
-    
+
     const donateAddress = await donate.getAddress();
     return { donate, donateAddress };
 }
@@ -50,14 +70,23 @@ async function main() {
     console.log('Deploying contracts with the account: ', deployer.address);
 
     const { signUp, signUpAddress } = await deploySignUp();
-    const { donate, donateAddress } = await deployDonate();
+    const { impactToken, impactTokenAddress } = await deployImpactToken();
+
+    // Donate precisa do endereço do ImpactToken no construtor
+    const { donate, donateAddress } = await deployDonate(impactTokenAddress);
     const { campaign, campaignAddress } = await deployCampaign(signUpAddress, donateAddress);
 
-    donate.setCampaignContract(campaignAddress);
+    // Vincula o Campaign ao Donate
+    await donate.setCampaignContract(campaignAddress);
 
-    console.log('SignUp deployed to: ', signUpAddress);
-    console.log('Donate deployed to: ', donateAddress);
-    console.log('Campaign deployed to: ', campaignAddress);
+    // Transfere a propriedade do ImpactToken para o Donate,
+    // pois apenas o owner pode mintar novos tokens (ver ImpactToken.sol)
+    await impactToken.transferOwnership(donateAddress);
+
+    console.log('SignUp deployed to:      ', signUpAddress);
+    console.log('ImpactToken deployed to: ', impactTokenAddress);
+    console.log('Donate deployed to:      ', donateAddress);
+    console.log('Campaign deployed to:    ', campaignAddress);
 }
 
 main()
