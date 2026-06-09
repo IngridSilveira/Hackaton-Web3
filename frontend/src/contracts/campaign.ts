@@ -76,6 +76,24 @@ export class CampaignContract {
         }
     }
 
+
+    public async requestWithdrawal(id: string, cid: string): Promise<[void | null, Error | null]> {
+        try {
+            const tx = await this.instance.requestWithdrawal(id, cid);
+            return [tx, null];
+        }
+        catch (err) {
+            let message = 'Um erro desconhecido aconteceu';
+
+            console.log(err)
+
+            if (typeof err === "object" && err && "reason" in err && err.reason != null)
+                message = err.reason as string;
+
+            return [null, new ContractException(message)];
+        }
+    }
+
     public onCreateCampaign(callback: CallbackCampaignCreated) {
         this.instance.on('CampaignCreated', callback);
     }

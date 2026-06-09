@@ -1,41 +1,40 @@
 {
   "_format": "hh3-artifact-1",
-  "contractName": "ICampaign",
-  "sourceName": "contracts/Campaign.sol",
+  "contractName": "IVoteToken",
+  "sourceName": "contracts/VoteToken.sol",
   "abi": [
     {
       "inputs": [
         {
+          "internalType": "address",
+          "name": "_from",
+          "type": "address"
+        },
+        {
           "internalType": "uint256",
-          "name": "_id",
+          "name": "_tokens",
           "type": "uint256"
         }
       ],
-      "name": "campaignIsAcceptingDonations",
-      "outputs": [
-        {
-          "internalType": "bool",
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "stateMutability": "view",
+      "name": "burn",
+      "outputs": [],
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
       "inputs": [
         {
-          "internalType": "uint256",
-          "name": "_id",
-          "type": "uint256"
+          "internalType": "address",
+          "name": "_to",
+          "type": "address"
         },
         {
           "internalType": "uint256",
-          "name": "_amount",
+          "name": "_tokens",
           "type": "uint256"
         }
       ],
-      "name": "updateCurrentAmount",
+      "name": "mint",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -46,6 +45,6 @@
   "linkReferences": {},
   "deployedLinkReferences": {},
   "immutableReferences": {},
-  "inputSourceName": "project/contracts/Campaign.sol",
+  "inputSourceName": "project/contracts/VoteToken.sol",
   "buildInfoId": "solc-0_8_28-597127e8e1433f3073a704306e563ce6c73d2ed7"
 }

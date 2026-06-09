@@ -2,8 +2,8 @@ import { create } from 'ipfs-http-client';
 import { useState } from 'react';
 
 interface HookProps {
-    onProgress: (bytes: number) => void
-    onFinish: (cid: string) => void
+    onProgress?: (bytes: number) => void
+    onFinish?: (cid: string) => void
 }
 
 export function useIPFS(props: HookProps) {
@@ -23,6 +23,17 @@ export function useIPFS(props: HookProps) {
         return cid;
     }
 
+    const openFile = async (cid: string) => {
+        const chunks = []
+
+        for await (const chunk of client.cat(cid)) {
+            chunks.push(chunk)
+        }
+
+        const blob = new Blob(chunks as any, { type: "application/pdf" });
+        return blob;
+    }
+
 
     const uploadFileIpfs = async (file: File) => {
         setIsUploadding(true);
@@ -37,5 +48,6 @@ export function useIPFS(props: HookProps) {
     return {
         uploadFileIpfs,
         isUploadding,
+        openFile,
     }
 }

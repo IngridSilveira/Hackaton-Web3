@@ -25,6 +25,7 @@ export class Events {
     protected eventsName = [
         'CampaignCreated',
         'DonationReceived',
+        'WithdrawalRequested',
     ];
 
 

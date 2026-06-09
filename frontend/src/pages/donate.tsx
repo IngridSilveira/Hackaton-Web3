@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import type { CampaignType, EventType } from "../types/campaing";
 import type { UserType } from "../types/user";
 
-import { ArrowLeft, PiggyBank, Landmark, BanknoteArrowUp } from "lucide-react";
+import { ArrowLeft, PiggyBank, Landmark, BanknoteArrowUp, Award } from "lucide-react";
 import React, { useCallback, useEffect, useState, type SubmitEventHandler } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom"
 
@@ -22,6 +22,7 @@ import { Events } from "../contracts/events";
 import { CircleLoadding } from "../components/circleLoadding";
 
 import { ModalWithdraw } from "../components/modalWithdraw";
+import { useIPFS } from "../hooks/useIPFS";
 
 
 function LoaddingCampaingsInformations() {
@@ -231,11 +232,22 @@ interface EventItemProps {
 function EventItem(props: EventItemProps) {
 
     const { event } = props;
+    const { openFile } = useIPFS({})
 
     const icons: Record<string, React.ReactNode> = {
         'CampaignCreated': <PiggyBank />,
         'DonationReceived': <BanknoteArrowUp />,
+        'WithdrawalRequested': <Award />
     };
+
+
+    const handlerOpenFile = async (cid: string) => {
+        const file = await openFile(cid);
+        const url = URL.createObjectURL(file);
+
+        window.open(url, '_blank')
+    }
+
 
     if (event.name == 'CampaignCreated') {
         return (
@@ -270,6 +282,30 @@ function EventItem(props: EventItemProps) {
                     </p>
                     <small>
                         Foi feita uma doação no valor de <b>{ ethers.formatEther(event.args.amount) } ETH</b>
+                    </small>
+                </div>
+            </div>
+        );
+    }
+
+    if (event.name == 'WithdrawalRequested') {
+        return (
+            <div className="flex items-center gap-3">
+                <div className="p-3 border rounded-full">
+                    { icons[event.name] }
+                </div>
+
+                <div>
+                    <p className="font-bold">
+                        Solicitação de saque!
+                    </p>
+                    <small>
+                        A solicitação de saque foi solicitada, depois da votação dos doadores os fundos 
+                        seram transferidos. 
+
+                        <Button variant="link" onClick={() => handlerOpenFile(event.args.cid)}>
+                            Abrir aquivo
+                        </Button>
                     </small>
                 </div>
             </div>
