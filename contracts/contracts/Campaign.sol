@@ -8,6 +8,10 @@ import { ISignUp } from "./SignUp.sol";
 interface ICampaign {
     function campaignIsAcceptingDonations(uint256 _id) external view returns (bool);
     function updateCurrentAmount(uint256 _id, uint256 _amount) external;
+    /// @dev Retorna o criador (ONG) de uma campanha — usado pelo CampaignGovernor para validar o solicitante do saque.
+    function getCampaignCreator(uint256 _id) external view returns (address);
+    /// @dev Retorna o valor arrecadado de uma campanha — usado pelo CampaignGovernor para validar o valor do saque.
+    function getCampaignCurrentAmount(uint256 _id) external view returns (uint256);
 }
 
 
@@ -166,6 +170,32 @@ contract Campaign is Ownable {
     function getCampaign(uint256 _id) public view returns (CampaignStruct memory) {
         require(campaigns[_id].id == _id, "Campanha nao encontrada.");
         return campaigns[_id];
+    }
+
+
+    /**
+     * @dev Retorna o endereço do criador (ONG) de uma campanha.
+     * Utilizado pelo CampaignGovernor para validar que apenas o criador
+     * pode solicitar o saque dos fundos arrecadados.
+     *
+     * @param _id O ID da campanha.
+     * @return O endereço da ONG criadora.
+     */
+    function getCampaignCreator(uint256 _id) public view returns (address) {
+        return campaigns[_id].creator;
+    }
+
+
+    /**
+     * @dev Retorna o valor total arrecadado em uma campanha.
+     * Utilizado pelo CampaignGovernor para validar que o valor do saque
+     * não excede o total disponível no contrato Donate.
+     *
+     * @param _id O ID da campanha.
+     * @return O valor atual arrecadado (em Wei).
+     */
+    function getCampaignCurrentAmount(uint256 _id) public view returns (uint256) {
+        return campaigns[_id].currentAmount;
     }
 
 

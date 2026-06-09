@@ -19,6 +19,10 @@ export class SignUpContract {
 
 
     constructor(signer: ethers.Signer) {
+        if (!this.contractAddress) {
+            throw new Error('VITE_SIGNUP_ADDRESS não está configurado no arquivo .env');
+        }
+
         this.instance = new ethers.Contract(
             this.contractAddress,
             SignUpABI.abi,

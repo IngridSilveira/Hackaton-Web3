@@ -12,15 +12,14 @@ async function deploySignUp() {
     await signUp.waitForDeployment();
 
     const signUpAddress = await signUp.getAddress();
-
     return { signUp, signUpAddress };
 }
 
 
 /**
  * Função para realizar o deploy do ImpactToken.
- * O ImpactToken deve ser deployado ANTES do Donate,
- * pois o Donate recebe seu endereço no construtor.
+ * O ImpactToken deve ser deployado ANTES do Donate, pois o Donate
+ * recebe seu endereço no construtor para poder mintar tokens aos doadores.
  */
 async function deployImpactToken() {
     const ImpactToken = await ethers.getContractFactory('ImpactToken');
@@ -28,7 +27,6 @@ async function deployImpactToken() {
     await impactToken.waitForDeployment();
 
     const impactTokenAddress = await impactToken.getAddress();
-
     return { impactToken, impactTokenAddress };
 }
 
@@ -36,6 +34,8 @@ async function deployImpactToken() {
 /**
  * Função para realizar o deploy do contrato de Donate.
  * Recebe o endereço do ImpactToken para que possa mintar tokens aos doadores.
+ *
+ * @param impactTokenAddress Endereço do ImpactToken já deployado.
  */
 async function deployDonate(impactTokenAddress: string) {
     const Donate = await ethers.getContractFactory('Donate');
@@ -46,6 +46,14 @@ async function deployDonate(impactTokenAddress: string) {
     return { donate, donateAddress };
 }
 
+
+/**
+ * Função para realizar o deploy do contrato de Campaign.
+ * Após o deploy, configura os endereços dos contratos dependentes (SignUp e Donate).
+ *
+ * @param signUpAddress  Endereço do SignUp já deployado.
+ * @param donateAddress  Endereço do Donate já deployado.
+ */
 async function deployCampaign(signUpAddress: string, donateAddress: string) {
     const Campaign = await ethers.getContractFactory('Campaign');
     const campaign = await Campaign.deploy();
@@ -53,9 +61,6 @@ async function deployCampaign(signUpAddress: string, donateAddress: string) {
 
     const campaignAddress = await campaign.getAddress();
 
-    /**
-     * Definindo o contrato de SignUp no contrato de Campaign
-     */
     await campaign.setSignUpContract(signUpAddress);
     await campaign.setDonateContract(donateAddress);
 
@@ -63,35 +68,87 @@ async function deployCampaign(signUpAddress: string, donateAddress: string) {
 }
 
 
+/**
+ * Função para realizar o deploy do CampaignGovernor.
+ *
+ * O Governor é o contrato de DAO que gerencia a votação para liberação de fundos.
+ * Ele recebe o ImpactToken como token de votação (ERC20Votes) e referências
+ * aos demais contratos para validar e executar as propostas de saque.
+ *
+ * @param impactTokenAddress  Endereço do ImpactToken (poder de voto).
+ * @param signUpAddress       Endereço do SignUp (validação de ONGs).
+ * @param campaignAddress     Endereço do Campaign (validação de campanhas).
+ * @param donateAddress       Endereço do Donate (target do releaseFunds).
+ */
+async function deployCampaignGovernor(
+    impactTokenAddress: string,
+    signUpAddress: string,
+    campaignAddress: string,
+    donateAddress: string
+) {
+    const CampaignGovernor = await ethers.getContractFactory('CampaignGovernor');
+    const governor = await CampaignGovernor.deploy(
+        impactTokenAddress,
+        signUpAddress,
+        campaignAddress,
+        donateAddress
+    );
+    await governor.waitForDeployment();
+
+    const governorAddress = await governor.getAddress();
+    return { governor, governorAddress };
+}
+
 
 async function main() {
     const [deployer] = await ethers.getSigners();
+    console.log('Deploying contracts with the account:', deployer.address);
 
-    console.log('Deploying contracts with the account: ', deployer.address);
-
+    // 1. SignUp — registro de usuários (ONG / Doador)
     const { signUp, signUpAddress } = await deploySignUp();
+
+    // 2. ImpactToken — token de voto proporcional às doações
     const { impactToken, impactTokenAddress } = await deployImpactToken();
 
-    // Donate precisa do endereço do ImpactToken no construtor
+    // 3. Donate — custódia dos fundos em escrow + mint de ImpactToken
     const { donate, donateAddress } = await deployDonate(impactTokenAddress);
+
+    // 4. Campaign — gerenciamento de campanhas das ONGs
     const { campaign, campaignAddress } = await deployCampaign(signUpAddress, donateAddress);
 
-    // Vincula o Campaign ao Donate
+    // 5. CampaignGovernor — DAO de votação para liberar fundos
+    const { governor, governorAddress } = await deployCampaignGovernor(
+        impactTokenAddress,
+        signUpAddress,
+        campaignAddress,
+        donateAddress
+    );
+
+    // Pós-configuração:
+
+    // Vincula o Campaign ao Donate (para verificar estado das campanhas)
     await donate.setCampaignContract(campaignAddress);
 
-    // Transfere a propriedade do ImpactToken para o Donate,
-    // pois apenas o owner pode mintar novos tokens (ver ImpactToken.sol)
+    // Registra o Governor no Donate (apenas ele pode chamar releaseFunds)
+    await donate.setGovernorContract(governorAddress);
+
+    // Transfere a propriedade do ImpactToken para o Donate
+    // (somente o owner do ImpactToken pode mintar novos tokens)
     await impactToken.transferOwnership(donateAddress);
 
-    console.log('SignUp deployed to:      ', signUpAddress);
-    console.log('ImpactToken deployed to: ', impactTokenAddress);
-    console.log('Donate deployed to:      ', donateAddress);
-    console.log('Campaign deployed to:    ', campaignAddress);
+    console.log('----------------------------------------');
+    console.log('SignUp deployed to:          ', signUpAddress);
+    console.log('ImpactToken deployed to:     ', impactTokenAddress);
+    console.log('Donate deployed to:          ', donateAddress);
+    console.log('Campaign deployed to:        ', campaignAddress);
+    console.log('CampaignGovernor deployed to:', governorAddress);
+    console.log('----------------------------------------');
+    console.log('Copie os endereços acima para o arquivo frontend/.env');
 }
 
 main()
     .then(() => console.log('Deploy feito com sucesso!'))
     .catch((error) => {
-        console.error('Erro ao fazer o deploy: ', error);
+        console.error('Erro ao fazer o deploy:', error);
         process.exit(1);
     });
