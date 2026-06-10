@@ -2,8 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import { ISignUp } from "./SignUp.sol";
 
+import { ISignUp } from "./SignUp.sol";
+import { IDAO } from "./DAO.sol";
 
 interface ICampaign {
     function campaignIsAcceptingDonations(uint256 _id) external view returns (bool);
@@ -46,6 +47,12 @@ contract Campaign is Ownable {
      */
     ISignUp private signUpContract;
 
+    /**
+     * @dev O contrato de DAO é private porque ele só é utilizado
+     * internamente para criar propostas de votação.
+     */
+    IDAO private daoContract;
+    address private daoContractAddress;
 
     /**
      * @dev O contrato de Donate é private porque ele só é utilizado
@@ -75,6 +82,26 @@ contract Campaign is Ownable {
      * Passando 
      */
     event CampaignCreated(uint256 indexed campaignId, string title, uint256 goalAmount, address indexed creator);
+
+
+    /**
+     * @dev Evento para notificar a solicitação de um saque.
+     * @param campaignId O ID da campanha para a qual o saque foi solicitado.
+     * @param cid O CID do arquivo IPFS contendo as evidências para a solicitação de saque.
+     */
+    event WithdrawalRequested(uint256 indexed campaignId, string cid);
+
+    /**
+     * @dev Evento para notificar a criação de uma nova proposta de votação.
+     *
+     * @param campaignId O ID da campanha para a qual a proposta foi criada.
+     * @param goalAmount O valor objetivo da proposta.
+     * @param creator O endereço do criador da proposta.
+     */
+    event VotingCreated(uint256 indexed campaignId, uint256 proposalId, uint256 goalAmount, address indexed creator);
+
+
+    event ProposalQueued(uint256 indexed campaignId, uint256 proposalId, address indexed creator);
 
     /**
      * @dev Definindo o owner do contrato como o endereço do deployer.
@@ -108,6 +135,17 @@ contract Campaign is Ownable {
      */
     function setDonateContract(address _donateContract) public onlyOwner {
         donateContract = _donateContract;
+    }
+
+    /**
+     * @dev Função para setar o endereço do contrato de DAO.
+     * Essa função só pode ser chamada pelo owner do contrato.
+     *
+     * @param _daoContract O endereço do contrato de DAO.
+     */
+    function setDAOContract(address _daoContract) public onlyOwner {
+        daoContract = IDAO(_daoContract);
+        daoContractAddress = _daoContract;
     }
 
 
@@ -199,5 +237,85 @@ contract Campaign is Ownable {
         require(campaign.id == _id, "Campanha nao encontrada.");
 
         campaign.currentAmount += _amount;
+    }
+
+
+    /**
+     * @dev Função para solicitar um saque de uma campanha.
+     *
+     * @param _id O ID da campanha para a qual o saque será solicitado.
+     * @param _cid O CID do arquivo IPFS contendo as evidências para a solicitação de saque.
+     */
+    function requestWithdrawal(uint256 _id, string memory _cid) public {
+        CampaignStruct memory campaign = campaigns[_id];
+
+        require(campaign.id == _id, "Campanha nao encontrada.");
+        require(campaign.creator == msg.sender, "Apenas o criador da campanha pode solicitar o saque.");
+        require(campaign.currentAmount >= campaign.goalAmount, "O valor arrecadado ainda nao atingiu o valor objetivo.");
+
+        emit WithdrawalRequested(_id, _cid);
+
+        /**
+         * @dev Se o contrato de DAO estiver definido, criamos uma proposta de saque.
+         */
+        if (address(daoContract) != address(0)) {
+            address[] memory targets = new address[](1);
+            uint256[] memory values = new uint256[](1);
+            bytes[] memory calldatas = new bytes[](1);
+
+            targets[0] = donateContract;
+            values[0] = campaign.currentAmount;
+            calldatas[0] = abi.encodeWithSignature(
+                "transferTokens(address,uint256)",
+                campaign.creator,
+                campaign.currentAmount
+            );
+
+            uint256 proposalId = daoContract.propose(
+                targets,
+                values,
+                calldatas,
+                string(abi.encodePacked("Solicitacao de saque para ", campaign.title))
+            );
+
+
+            emit VotingCreated(_id, proposalId, campaign.currentAmount, msg.sender);
+        }
+
+    }
+
+
+    function queue(uint256 _id) public {
+        CampaignStruct memory campaign = campaigns[_id];
+
+        require(campaign.id == _id, "Campanha nao encontrada.");
+        require(campaign.creator == msg.sender, "Apenas o criador da campanha pode solicitar o saque.");
+        require(campaign.currentAmount >= campaign.goalAmount, "O valor arrecadado ainda nao atingiu o valor objetivo.");
+
+        if (address(daoContract) != address(0))
+            revert("A funcao de queue ainda nao esta implementada no contrato de DAO.");
+
+
+        address[] memory targets = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+
+        targets[0] = donateContract;
+        values[0] = campaign.currentAmount;
+        calldatas[0] = abi.encodeWithSignature(
+            "transferTokens(address,uint256)",
+            campaign.creator,
+            campaign.currentAmount
+        );
+
+        uint256 proposalId = daoContract.propose(
+            targets,
+            values,
+            calldatas,
+            string(abi.encodePacked("Solicitacao de saque para ", campaign.title))
+        );
+
+
+        emit ProposalQueued(_id, proposalId, msg.sender);
     }
 }

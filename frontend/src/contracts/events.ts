@@ -26,6 +26,8 @@ export class Events {
         'CampaignCreated',
         'DonationReceived',
         'WithdrawalRequested',
+        'VotingCreated',
+        'ProposalQueued',
     ];
 
 

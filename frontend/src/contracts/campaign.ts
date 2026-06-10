@@ -85,7 +85,20 @@ export class CampaignContract {
         catch (err) {
             let message = 'Um erro desconhecido aconteceu';
 
-            console.log(err)
+            if (typeof err === "object" && err && "reason" in err && err.reason != null)
+                message = err.reason as string;
+
+            return [null, new ContractException(message)];
+        }
+    }
+
+    public async queue(id: bigint): Promise<[void | null, Error | null]> {
+        try {
+            const tx = await this.instance.queue(id);
+            return [tx, null];
+        }
+        catch (err) {
+            let message = 'Um erro desconhecido aconteceu';
 
             if (typeof err === "object" && err && "reason" in err && err.reason != null)
                 message = err.reason as string;

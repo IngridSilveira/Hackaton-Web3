@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import type { CampaignType, EventType } from "../types/campaing";
 import type { UserType } from "../types/user";
 
-import { ArrowLeft, PiggyBank, Landmark, BanknoteArrowUp, Award } from "lucide-react";
+import { ArrowLeft, PiggyBank, Landmark, BanknoteArrowUp, Award, ChessKing, X, Check } from "lucide-react";
 import React, { useCallback, useEffect, useState, type SubmitEventHandler } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom"
 
@@ -23,6 +23,8 @@ import { CircleLoadding } from "../components/circleLoadding";
 
 import { ModalWithdraw } from "../components/modalWithdraw";
 import { useIPFS } from "../hooks/useIPFS";
+import { DaoContract } from "../contracts/dao";
+import toast from "react-hot-toast";
 
 
 function LoaddingCampaingsInformations() {
@@ -225,20 +227,95 @@ function MakeDonationForm(props: MakeDonationFormProps) {
     );
 }
 
+interface VoitinngMessageProps {
+    state: number;
+}
+
+function VoitinngMessage(props: VoitinngMessageProps) {
+    if (props.state == 0) return (
+        <>
+            <small className="text-yellow-600">A votação ainda não começou!</small>
+            <br />
+        </>
+    )
+    if (props.state == 1) return (
+        <>
+            <small className="text-green-600">A votação começou!</small>
+            <br />
+        </>
+    )
+    if (props.state == 2) return (
+        <>
+            <small className="text-red-600">A votação terminou!</small>
+            <br />
+        </>
+    )
+    if (props.state == 4) return (
+        <>
+            <small className="text-yellow-600">A votação foi aprovada!</small>
+            <br />
+        </>
+    )
+    if (props.state == 5) return (
+        <>
+            <small className="text-yellow-600">A votação esta pronta para ser executada!</small>
+            <br />
+        </>
+    )
+    if (props.state == 7) return (
+        <>
+            <small className="text-green-600">A votação foi executada!</small>
+            <br />
+        </>
+    )
+}
+
+interface VotingOptionsProps {
+    onAccept: () => void;
+    onDecline: () => void;
+}
+
+function VotingOptions(props: VotingOptionsProps) {
+
+    const { onAccept, onDecline } = props;
+
+    return (
+        <div className="mt-1">
+            <Button onClick={onAccept} className="bg-green-700 hover:bg-green-800">
+                <Check /> Afavor
+            </Button>
+
+            <Button onClick={onDecline} className="bg-red-700 hover:bg-red-800">
+                <X /> Contra
+            </Button>
+        </div>
+    );
+}
+
 interface EventItemProps {
     event: EventType;
 }
 
 function EventItem(props: EventItemProps) {
+    const signer = useWalletStore(state => state.signer);
 
     const { event } = props;
-    const { openFile } = useIPFS({})
+    const { openFile } = useIPFS({});
 
     const icons: Record<string, React.ReactNode> = {
         'CampaignCreated': <PiggyBank />,
         'DonationReceived': <BanknoteArrowUp />,
-        'WithdrawalRequested': <Award />
+        'WithdrawalRequested': <Award />,
+        'VotingCreated': <ChessKing />
     };
+
+    const daoContract = new DaoContract(signer!);
+    const campaignContract = new CampaignContract(signer!);
+
+    const { state, data, error, fetchData } = useRequest((proposalId) => daoContract.state(proposalId));
+    const { state: stateVoiting, data: dataVoiting, error: errorVoiting, fetchData: fetchVoiting } = useRequest((proposalId, vote) => daoContract.castVote(proposalId, vote));
+
+    const { state: stateQueue, fetchData: fetchQueue } = useRequest((proposalId) => campaignContract.queue(proposalId));
 
 
     const handlerOpenFile = async (cid: string) => {
@@ -247,6 +324,40 @@ function EventItem(props: EventItemProps) {
 
         window.open(url, '_blank')
     }
+
+    const handlerVoitingAccept = () => {
+        if (event.name != 'VotingCreated')
+            return;
+
+        fetchVoiting(event.args.proposalId, 1)
+    }
+
+    const handlerVoitingDecline = () => {
+        if (event.name != 'VotingCreated')
+            return;
+
+
+        fetchVoiting(event.args.proposalId, 0)
+    }
+
+    const handlerQueueProposal = () => {
+        if (data != 4)
+            return;
+
+        console.log(event.args.proposalId)
+        fetchQueue(event.args.proposalId);
+    }
+
+
+    useEffect(() => {
+        if (state == RequestState.SUCESS) toast.success('Voto computado com sucesso!');
+        if (state == RequestState.ERROR) toast.error('Erro ao computar voto!');
+    }, [stateVoiting])
+
+    useEffect(() => {
+        if (event.name == 'VotingCreated')
+            fetchData(event.args.proposalId)
+    }, []);
 
 
     if (event.name == 'CampaignCreated') {
@@ -306,6 +417,65 @@ function EventItem(props: EventItemProps) {
                         <Button variant="link" onClick={() => handlerOpenFile(event.args.cid)}>
                             Abrir aquivo
                         </Button>
+                    </small>
+                </div>
+            </div>
+        );
+    }
+    
+    if (event.name == 'ProposalQueued') {
+        return (
+            <div className="flex items-center gap-3">
+                <div className="p-3 border rounded-full">
+                    { icons[event.name] }
+                </div>
+
+                <div>
+                    <p className="font-bold">
+                        A proposta esta na fila para ser executada!
+                    </p>
+                    <small>
+                        A proposta esta na fila para ser executada, quando for executada os fundos seram 
+                        transferidos.
+                    </small>
+                </div>
+            </div>
+        );
+    }
+
+    if (event.name == 'VotingCreated') {
+
+        return (
+            <div className="flex items-center gap-3">
+                <div className="p-3 border rounded-full">
+                    { icons[event.name] }
+                </div>
+
+                <div>
+                    <p className="font-bold">
+                        Votação para liberar os saques
+                    </p>
+                    <small>
+                        A votação foi criada para liberar os fundos, quando os doadores aprovarem a 
+                        transferencia! <br />
+
+                        { 
+                            state == RequestState.SUCESS 
+                            ? <VoitinngMessage state={data!} /> 
+                            : null 
+                        }
+
+                        { 
+                            state == RequestState.SUCESS && data == 1
+                            ? <VotingOptions onAccept={handlerVoitingAccept} onDecline={handlerVoitingDecline} /> 
+                            : null 
+                        }
+
+                        {
+                            state == RequestState.SUCESS && data == 4
+                            ? <Button onClick={handlerQueueProposal}>Colocar na fila</Button>
+                            : null
+                        }
                     </small>
                 </div>
             </div>

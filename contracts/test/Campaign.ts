@@ -13,6 +13,8 @@ describe('Tests of Campaign contract', async () => {
 
     let signUpContract: any;
     let campaignContract: any;
+    let donateContract: any;
+    let voteTokenContract: any;
 
     /**
      * Fazendo o deploy do contrato Campaign antes de rodar os testes.
@@ -22,21 +24,38 @@ describe('Tests of Campaign contract', async () => {
     before(async () => {
         const SignUpContract = await ethers.getContractFactory('SignUp');
         const CampaignContract = await ethers.getContractFactory('Campaign');
+        const DonateContract = await ethers.getContractFactory('Donate');
+        const VoteTokenContract = await ethers.getContractFactory('VoteToken');
 
-        const [signUpDeployed, campaignDeployed] = await Promise.all([
+        const [signUpDeployed, campaignDeployed, donateDeployed, voteTokenDeployed] = await Promise.all([
             SignUpContract.deploy(),
             CampaignContract.deploy(),
+            DonateContract.deploy(),
+            VoteTokenContract.deploy()
         ]);
 
         signUpContract = signUpDeployed;
         campaignContract = campaignDeployed;
+        donateContract = donateDeployed;
+        voteTokenContract = voteTokenDeployed;
 
-        const signUpAddress = await signUpContract.getAddress();
+        const [signUpAddress, campaignAddress, donateAddress, voteTokenAddress] = await Promise.all([
+            signUpContract.getAddress(),
+            campaignContract.getAddress(),
+            donateContract.getAddress(),
+            voteTokenContract.getAddress()
+        ]);
 
         /**
          * Definindo o contrato de SignUp no contrato de Campaign
          */
         await campaignContract.setSignUpContract(signUpAddress);
+        await campaignContract.setDonateContract(donateAddress);
+
+        await donateContract.setVoteTokenContract(voteTokenAddress);
+        await donateContract.setCampaignContract(campaignAddress);
+
+        await voteTokenContract.transferOwnership(donateAddress);
     });
 
 
@@ -91,13 +110,13 @@ describe('Tests of Campaign contract', async () => {
         expect(tx).to.be.revertedWith('O titulo da campanha nao pode ser vazio.');
     });
 
-
     it('Create campaign', async () => {
         /**
          * O others fez o sign up como ONG e deve criar 
          * uma campanha com sucesso.
          */
         const [,, other] = await ethers.getSigners();
+
         await signUpContract
             .connect(other)
             .signUp('Richard Feynman', ProfileType.ONG);
@@ -106,10 +125,28 @@ describe('Tests of Campaign contract', async () => {
             .connect(other)
             .createCampaign(
                 'Campanha de Teste',
-                ethers.parseEther('10')
+                ethers.parseEther('1')
             );
 
         expect(tx).to.emit(campaignContract, 'CampaignCreated');
+    });
+
+
+    it('Request withdrawal', async () => {
+        const [,, other] = await ethers.getSigners();
+
+        const donateTx =  donateContract
+            .connect(other)
+            .donate(0, { value: ethers.parseEther('1') });
+
+        await expect(donateTx).to.emit(donateContract, 'DonationReceived');
+        const evidenceCid = ethers.keccak256(ethers.toUtf8Bytes('evidencia'));
+
+        const tx = campaignContract
+            .connect(other)
+            .requestWithdrawal(0, evidenceCid);
+
+        expect(tx).to.emit(campaignContract, 'WithdrawalRequested');
     });
 
 

@@ -14,15 +14,18 @@ describe('Tests of Donate contract', async () => {
     let signUpContract: any;
     let campaignContract: any;
     let donateContract: any;
+    let voteTokenContract: any;
 
 
     before(async () => {
         const SignUpContract = await ethers.getContractFactory('SignUp');
+        const VoteTokenContract = await ethers.getContractFactory('VoteToken');
         const CampaignContract = await ethers.getContractFactory('Campaign');
         const DonateContract = await ethers.getContractFactory('Donate');
 
-        const [signUpDeployed, campaignDeployed, donateDeployed] = await Promise.all([
+        const [signUpDeployed, voteTokenDeployed, campaignDeployed, donateDeployed] = await Promise.all([
             SignUpContract.deploy(),
+            VoteTokenContract.deploy(),
             CampaignContract.deploy(),
             DonateContract.deploy(),
         ]);
@@ -30,9 +33,11 @@ describe('Tests of Donate contract', async () => {
         signUpContract = signUpDeployed;
         campaignContract = campaignDeployed;
         donateContract = donateDeployed;
+        voteTokenContract = voteTokenDeployed;
 
-        const [signUpAddress, campaignAddress, donateAddress] = await Promise.all([
+        const [signUpAddress, voteTokenAddress, campaignAddress, donateAddress] = await Promise.all([
             signUpContract.getAddress(),
+            voteTokenContract.getAddress(),
             campaignContract.getAddress(),
             donateContract.getAddress(),
         ]);
@@ -40,7 +45,10 @@ describe('Tests of Donate contract', async () => {
         await campaignContract.setSignUpContract(signUpAddress);
         await campaignContract.setDonateContract(donateAddress);
 
+        await donateContract.setVoteTokenContract(voteTokenAddress);
         await donateContract.setCampaignContract(campaignAddress);
+        
+        await voteTokenContract.transferOwnership(donateAddress);
     });
 
 
@@ -110,6 +118,10 @@ describe('Tests of Donate contract', async () => {
             .connect(donor)
             .donate(1, { value: ethers.parseEther('1') });
 
-        expect(tx).to.emit(donateContract, 'DonationReceived');
+        await expect(tx).to.emit(donateContract, 'DonationReceived');
+
+        const txBalance = await voteTokenContract.balanceOf(donor.address);
+        expect(txBalance).to.equal(100n * 10n ** 18n);
     });
+
 });

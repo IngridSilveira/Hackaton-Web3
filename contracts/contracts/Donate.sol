@@ -3,7 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import { ICampaign } from "./Campaign.sol";
+import { IVoteToken } from "./VoteToken.sol";
 
 /**
  * @title Donate 
@@ -21,6 +23,16 @@ contract Donate is Ownable, ReentrancyGuard {
      * E atualizar o valor arrecadado nas campanhas quando uma doação é feita.
      */
     ICampaign private campaignContract;
+    address private campaignContractAddress;
+
+
+    /**
+     * @dev O contrato de VoteToken é private porque ele só é utilizado 
+     * internamente para interagir com o contrato de VoteToken. Esse contrato
+     * permite que o contrato de Donate faça o mint e burn dos tokens de votação
+     * para os usuarios que fizerem doações. 
+     */
+    IVoteToken private voteTokenContract;
 
 
     /**
@@ -52,7 +64,16 @@ contract Donate is Ownable, ReentrancyGuard {
      * é importante para garantir que apenas o proprietário do contrato possa definir o 
      * contrato de Campaign.
      */
-    constructor() Ownable(msg.sender) {
+    constructor() Ownable(msg.sender) 
+    {}
+
+
+    modifier onlyCampaignContract() {
+        require(
+            msg.sender == campaignContractAddress, 
+            "Apenas o contrato de Campaign pode chamar essa funcao."
+        );
+        _;
     }
 
 
@@ -62,6 +83,15 @@ contract Donate is Ownable, ReentrancyGuard {
      */
     function setCampaignContract(address _campaignContract) public onlyOwner {
         campaignContract = ICampaign(_campaignContract);
+        campaignContractAddress = _campaignContract;
+    }
+
+    /**
+     * @dev Define o contrato de VoteToken para que o contrato de Donate possa interagir com ele.
+     * @param _voteTokenContract O endereço do contrato de VoteToken a ser definido.
+     */
+    function setVoteTokenContract(address _voteTokenContract) public onlyOwner {
+        voteTokenContract = IVoteToken(_voteTokenContract);
     }
 
 
@@ -80,10 +110,18 @@ contract Donate is Ownable, ReentrancyGuard {
             "O valor da doacao deve ser maior que zero."
         );
 
+        uint256 tokensToMint = (msg.value * 100 * 1e18) / 1e18;
+
+        voteTokenContract.mint(msg.sender, tokensToMint);
         campaignContract.updateCurrentAmount(_campaignId, msg.value);
         donationsByCampaign[_campaignId][msg.sender] += msg.value;
 
         emit DonationReceived(_campaignId, msg.sender, msg.value);
     }
 
+
+
+    function transferTokens(address _to, uint256 _amount) public onlyCampaignContract {
+        // 
+    }
 }
